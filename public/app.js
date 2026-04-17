@@ -6,14 +6,133 @@
 
 // ── State ─────────────────────────────────────
 const S = {
-  projectName: '', date: '', area: '', designer: '', researcher: '',
+  projectName: '', date: '', area: '', designer: [], researcher: [],
   purpose: '', context: '',
   objectives: [],
   participants: [],
+  outreachEmail: null,
+  outreachSlack: null,
   analysisResult: null,
   synthesisResult: null,
 };
 let pid = 1, oid = 1;
+
+const DESIGNERS  = ['Ally','Andras','Erick','Helen','Janmesh','Jason','Jenya','Jessica','Julie','Julieta','Katrina','Missy','Mo','Salomon','Santhosh','Shikha','Sid','Travis'];
+const RESEARCHERS = ['Shikha'];
+
+function addPerson(field, select) {
+  const name = select.value;
+  select.value = '';
+  if (!name || S[field].includes(name)) return;
+  S[field].push(name);
+  renderPersonPills(field);
+}
+
+function removePerson(field, name) {
+  S[field] = S[field].filter(n => n !== name);
+  renderPersonPills(field);
+}
+
+function renderPersonPills(field) {
+  const c = document.getElementById(field + '-pills');
+  if (!c) return;
+  c.innerHTML = (S[field] || []).map(name =>
+    `<span class="ppill">${esc(name)}<button class="ppill-x" onclick="removePerson('${field}','${esc(name)}')">×</button></span>`
+  ).join('');
+}
+
+// ── Persistence ───────────────────────────────
+const STORAGE_KEY = 'rc_state_v1';
+
+function saveState() {
+  readObjectives();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ S, pid, oid }));
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const saved = JSON.parse(raw);
+    Object.assign(S, saved.S);
+    // Migrate old string values to arrays
+    if (typeof S.designer === 'string')  S.designer  = S.designer  ? [S.designer]  : [];
+    if (typeof S.researcher === 'string') S.researcher = S.researcher ? [S.researcher] : [];
+    pid = saved.pid || 1;
+    oid = saved.oid || 1;
+    return true;
+  } catch { return false; }
+}
+
+function restoreUI() {
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+  set('f-name', S.projectName);
+  set('f-date', S.date);
+  set('f-area', S.area);
+  set('f-purpose', S.purpose);
+  set('f-context', S.context);
+  document.getElementById('tb-title').textContent = S.projectName || 'New project';
+  renderPersonPills('designer');
+  renderPersonPills('researcher');
+
+  // Restore objective rows
+  document.getElementById('obj-rows').innerHTML = '';
+  const savedOid = oid;
+  oid = 1;
+  if (S.objectives.length) S.objectives.forEach(o => addObjRow(o));
+  else addObjRow({ priority: 'Must' });
+  oid = savedOid;
+
+  // Participants already in S — just render
+  refreshPTable();
+  updateBadges();
+
+  // Nav done states
+  if (S.projectName || S.purpose || S.objectives.some(o => o.objective))
+    document.getElementById('nav-setup').classList.add('done');
+  if (S.participants.length)
+    document.getElementById('nav-participants').classList.add('done');
+  if (S.participants.length && S.participants.every(p => p.status === 'completed' || p.status === 'declined'))
+    document.getElementById('nav-outreach').classList.add('done');
+
+  // Restore outreach button states
+  updateEmailBtn();
+  updateSlackBtn();
+
+  // Restore analysis
+  if (S.analysisResult?.participants?.length || S.synthesisResult) {
+    renderAnalysis({ participants: S.analysisResult?.participants || [], synthesis: S.synthesisResult });
+    document.getElementById('nav-analysis').classList.add('done');
+  }
+}
+
+function newProject() {
+  if (!confirm('Start a new project? All current data will be cleared.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  Object.assign(S, {
+    projectName: '', date: '', area: '', designer: [], researcher: [],
+    purpose: '', context: '',
+    objectives: [], participants: [],
+    outreachEmail: null,
+    outreachSlack: null,
+    analysisResult: null, synthesisResult: null,
+  });
+  pid = 1; oid = 1;
+  ['f-name','f-date','f-area','f-purpose','f-context']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  renderPersonPills('designer');
+  renderPersonPills('researcher');
+  document.getElementById('tb-title').textContent = 'New project';
+  document.getElementById('obj-rows').innerHTML = '';
+  document.getElementById('a-content').style.display = 'none';
+  document.getElementById('a-empty').style.display = 'block';
+  document.querySelectorAll('.nav').forEach(el => el.classList.remove('done'));
+  addObjRow({ priority: 'Must' });
+  refreshPTable();
+  updateBadges();
+  goTo('setup');
+  toast('New project started');
+}
 
 // ── Utils ─────────────────────────────────────
 function toast(m) {
@@ -69,7 +188,7 @@ Always respond with valid JSON only — no markdown fences, no preamble.
 Response schemas:
 - Outreach (internal-slack): {"message":""}
 - Outreach (external-email): {"subject":"","body":""}
-- Analysis: {"participants":[{"name":"","role":"","summary":"","byObjective":[{"objective":"","finding":"","confidence":"high|medium|low","quotes":[""]}]}],"synthesis":{"tldr":"","themes":[{"name":"","description":"","participants":""}],"topPainPoints":[""],"recommendations":[""],"openQuestions":[""]}}`;
+- Analysis: {"participants":[{"name":"","role":"","byObjective":[{"objective":"","finding":"2-3 sentence narrative specific to this objective: what this person does/experiences, the tension or insight, and why it matters — enough to stand alone without reading the transcript","confidence":"high|medium|low","quotes":[""]}]}],"synthesis":{"tldr":"","themes":[{"name":"","description":"","participants":""}],"topPainPoints":[""],"recommendations":[""],"openQuestions":[""]}}`;
 
 // ── Agent caller ─────────────────────────────
 async function callAgent(userMsg, options = {}) {
@@ -87,6 +206,73 @@ async function callAgent(userMsg, options = {}) {
   const text = data.content?.find(b => b.type === 'text')?.text || '';
   try { return JSON.parse(text.replace(/```json|```/g, '').trim()); }
   catch { throw new Error('JSON parse error: ' + text.slice(0, 200)); }
+}
+
+// ── AI fill ───────────────────────────────────
+async function fillWithAI() {
+  const input = document.getElementById('ai-input').value.trim();
+  if (!input) { toast('Describe your research first'); return; }
+
+  const btn = document.getElementById('ai-fill-btn');
+  const status = document.getElementById('ai-fill-status');
+  btn.disabled = true;
+  btn.textContent = '✦ Generating…';
+  status.textContent = '';
+
+  const prompt = `Extract and generate structured research plan fields from this description. Return ONLY a JSON object — no markdown, no preamble.
+
+Description:
+${input}
+
+Return this schema (use empty string "" for anything not determinable):
+{
+  "projectName": "short descriptive name",
+  "area": "product area or domain",
+  "purpose": "2-3 sentence research motivation and top-level goal",
+  "context": "constraints, background, additional notes",
+  "objectives": [
+    {
+      "priority": "Must",
+      "objective": "specific thing to learn",
+      "hypothesis": "best assumption",
+      "keyQuestions": "questions to answer",
+      "participants": "who would be ideal",
+      "methodology": "method + format",
+      "goalTargets": "measurable target if applicable"
+    }
+  ]
+}
+
+Generate 2–4 well-prioritised learning objectives (Must/Should/Could) from the description.`;
+
+  try {
+    const data = await callAgent(prompt);
+
+    if (data.projectName) {
+      document.getElementById('f-name').value = data.projectName;
+      S.projectName = data.projectName;
+      document.getElementById('tb-title').textContent = data.projectName;
+    }
+    if (data.area)    document.getElementById('f-area').value    = data.area;
+    if (data.purpose) document.getElementById('f-purpose').value = data.purpose;
+    if (data.context) document.getElementById('f-context').value = data.context;
+
+    if (data.objectives?.length) {
+      document.getElementById('obj-rows').innerHTML = '';
+      oid = 1;
+      data.objectives.forEach(o => addObjRow(o));
+    }
+
+    status.textContent = '✓ Fields generated — review and edit below';
+    status.style.color = 'var(--green)';
+    toast('Fields filled — review and save when ready');
+  } catch (e) {
+    status.textContent = 'Failed: ' + e.message;
+    status.style.color = 'var(--red)';
+  }
+
+  btn.disabled = false;
+  btn.textContent = '✦ Generate fields';
 }
 
 // ── Setup ─────────────────────────────────────
@@ -115,7 +301,7 @@ function addObjRow(data) {
   document.getElementById('obj-rows').appendChild(row);
 }
 
-function delObj(id) { document.getElementById('obj-' + id)?.remove(); }
+function delObj(id) { document.getElementById('obj-' + id)?.remove(); scheduleAutoSave(); }
 
 function readObjectives() {
   S.objectives = [];
@@ -134,30 +320,22 @@ function readObjectives() {
   });
 }
 
-async function saveSetup() {
-  const btn = document.getElementById('save-btn');
-  const status = document.getElementById('save-status');
-  btn.textContent = 'Saving…';
-  btn.disabled = true;
-
-  S.projectName = document.getElementById('f-name').value;
-  S.date        = document.getElementById('f-date').value;
-  S.area        = document.getElementById('f-area').value;
-  S.designer    = document.getElementById('f-designer').value;
-  S.researcher  = document.getElementById('f-researcher').value;
-  S.purpose     = document.getElementById('f-purpose').value;
-  S.context     = document.getElementById('f-context').value;
-  readObjectives();
-  liveTitle();
-
-  status.textContent = '✓ Saved';
-  status.style.color = 'var(--green)';
-
-  document.getElementById('nav-setup').classList.add('done');
-  btn.textContent = 'Save & continue';
-  btn.disabled = false;
-  toast('Project saved');
-  goTo('participants');
+// ── Auto-save for Setup fields ────────────────
+let _autoSaveTimer = null;
+function scheduleAutoSave() {
+  clearTimeout(_autoSaveTimer);
+  _autoSaveTimer = setTimeout(() => {
+    S.projectName = document.getElementById('f-name')?.value || '';
+    S.date        = document.getElementById('f-date')?.value || '';
+    S.area        = document.getElementById('f-area')?.value || '';
+    S.purpose     = document.getElementById('f-purpose')?.value || '';
+    S.context     = document.getElementById('f-context')?.value || '';
+    readObjectives();
+    liveTitle();
+    if (S.projectName || S.purpose || S.objectives.some(o => o.objective))
+      document.getElementById('nav-setup').classList.add('done');
+    saveState();
+  }, 500);
 }
 
 // ── CSV upload ────────────────────────────────
@@ -327,6 +505,7 @@ function addP(p) {
   S.participants.push(p);
   refreshPTable();
   updateBadges();
+  saveState();
 }
 
 function refreshPTable() {
@@ -350,9 +529,29 @@ function refreshPTable() {
 function removeP(id) {
   S.participants = S.participants.filter(p => p.id !== id);
   refreshPTable(); refreshOutreach(); updateBadges();
+  saveState();
 }
 
 // ── Outreach ──────────────────────────────────
+const STATUS_PILL = {
+  'pending':       { bg:'#f3f4f6', color:'#6b7280',  label:'Pending' },
+  'outreach-sent': { bg:'#eff6ff', color:'#1d4ed8',  label:'Outreach sent' },
+  'scheduled':     { bg:'#fef3c7', color:'#92400e',  label:'Scheduled' },
+  'completed':     { bg:'#f0fdf4', color:'#16a34a',  label:'Completed' },
+  'declined':      { bg:'#fee2e2', color:'#dc2626',  label:'Declined' },
+};
+
+function statusPill(id, current) {
+  const s = STATUS_PILL[current] || STATUS_PILL['pending'];
+  return `<div class="spill-wrap">
+    <span class="spill" style="background:${s.bg};color:${s.color}">${s.label}</span>
+    <select class="spill-sel" onchange="setStatus(${id},this.value)">
+      ${Object.entries(STATUS_PILL).map(([v,d]) =>
+        `<option value="${v}" ${current===v?'selected':''}>${d.label}</option>`).join('')}
+    </select>
+  </div>`;
+}
+
 function refreshOutreach() {
   const tbl = document.getElementById('o-tbl');
   const empty = document.getElementById('o-empty');
@@ -361,7 +560,7 @@ function refreshOutreach() {
   tbl.style.display = 'table';
   empty.style.display = 'none';
   body.innerHTML = S.participants.map(p => {
-    const done = p.status === 'completed';
+    const hasTranscript = !!p.transcript;
     return `<tr>
       <td><div class="cp">${esc(p.name)}</div><div class="cs">${esc(p.role)}${p.company ? ' · ' + esc(p.company) : ''}</div></td>
       <td>
@@ -370,37 +569,78 @@ function refreshOutreach() {
           <option value="external" ${p.type === 'external' ? 'selected' : ''}>External</option>
         </select>
       </td>
-      <td>
-        ${done
-          ? `<input class="iinp" value="${esc(p.zoomLink)}" placeholder="Paste Zoom link" onchange="setZoom(${p.id},this.value)"/>`
-          : `<span class="hint" style="font-size:11px">After completion</span>`}
-      </td>
-      <td>
-        <select class="isel" onchange="setStatus(${p.id},this.value)">
-          <option value="pending"       ${p.status === 'pending'       ? 'selected' : ''}>Pending</option>
-          <option value="outreach-sent" ${p.status === 'outreach-sent' ? 'selected' : ''}>Outreach sent</option>
-          <option value="scheduled"     ${p.status === 'scheduled'     ? 'selected' : ''}>Scheduled</option>
-          <option value="completed"     ${p.status === 'completed'     ? 'selected' : ''}>Completed</option>
-          <option value="declined"      ${p.status === 'declined'      ? 'selected' : ''}>Declined</option>
-        </select>
-      </td>
-      <td style="text-align:right">
-        ${done ? `<button class="btn xs filled" onclick="addTranscript(${p.id})">+ Transcript</button>` : ''}
+      <td>${statusPill(p.id, p.status)}</td>
+      <td><input class="iinp" value="${esc(p.zoomLink)}" placeholder="Paste Zoom link" onchange="setZoom(${p.id},this.value)"/></td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="btn xs ${hasTranscript ? 'transcript-done' : 'filled'}" onclick="triggerTranscriptUpload(${p.id})">
+          ${hasTranscript ? '✓ Transcript' : '+ Transcript'}
+        </button>
       </td>
     </tr>`;
   }).join('');
   updateMetrics();
 }
 
-function setStatus(id, val) { const p = S.participants.find(p => p.id === id); if (p) { p.status = val; refreshOutreach(); updateBadges(); } }
-function setType(id, val)   { const p = S.participants.find(p => p.id === id); if (p) p.type = val; }
-function setZoom(id, val)   { const p = S.participants.find(p => p.id === id); if (p) p.zoomLink = val; }
-
-function addTranscript(id) {
+function setStatus(id, val) {
   const p = S.participants.find(p => p.id === id);
   if (!p) return;
-  const t = prompt(`Paste Zoom transcript for ${p.name}:`);
-  if (t) { p.transcript = t; toast('Transcript saved for ' + p.name); }
+  p.status = val;
+  refreshOutreach();
+  updateBadges();
+  const nav = document.getElementById('nav-outreach');
+  if (S.participants.length && S.participants.every(p => p.status === 'completed' || p.status === 'declined')) {
+    nav.classList.add('done');
+  } else {
+    nav.classList.remove('done');
+  }
+  saveState();
+}
+function setType(id, val)   { const p = S.participants.find(p => p.id === id); if (p) { p.type = val; saveState(); } }
+function setZoom(id, val)   { const p = S.participants.find(p => p.id === id); if (p) { p.zoomLink = val; saveState(); } }
+
+// ── Transcript upload ─────────────────────────
+function parseVTT(content) {
+  return content.split('\n').filter(line => {
+    const t = line.trim();
+    if (!t) return false;
+    if (t.startsWith('WEBVTT')) return false;
+    if (t.startsWith('NOTE')) return false;
+    if (/^\d+$/.test(t)) return false;                    // cue index
+    if (/\d{2}:\d{2}.*-->/.test(t)) return false;        // timestamp line
+    return true;
+  }).join('\n').trim();
+}
+
+function triggerTranscriptUpload(pid) {
+  const input = document.getElementById('transcript-upload');
+  input.dataset.pid = pid;
+  input.click();
+}
+
+function handleTranscriptUpload(e) {
+  const file = e.target.files[0];
+  const pid = parseInt(e.target.dataset.pid);
+  e.target.value = '';
+  if (!file || !pid) return;
+
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const raw = ev.target.result;
+    const transcript = file.name.endsWith('.vtt') ? parseVTT(raw) : raw;
+    const p = S.participants.find(p => p.id === pid);
+    if (p) {
+      p.transcript = transcript;
+      // Auto-advance to completed if still pending
+      if (p.status === 'pending' || p.status === 'outreach-sent') {
+        p.status = 'completed';
+        updateBadges();
+      }
+      saveState();
+      refreshOutreach();
+      toast(`Transcript uploaded for ${p.name}`);
+    }
+  };
+  reader.readAsText(file);
 }
 
 function updateMetrics() {
@@ -409,8 +649,6 @@ function updateMetrics() {
   document.getElementById('m-done').textContent  = ps.filter(p => p.status === 'completed').length;
   document.getElementById('m-sched').textContent = ps.filter(p => p.status === 'scheduled').length;
   document.getElementById('m-pend').textContent  = ps.filter(p => p.status === 'pending' || p.status === 'outreach-sent').length;
-  const done = ps.filter(p => p.status === 'completed').length;
-  document.getElementById('tb-pill').textContent = `${done} / ${ps.length} interviews`;
 }
 
 function updateBadges() {
@@ -421,57 +659,227 @@ function updateBadges() {
   if (n) document.getElementById('nav-participants').classList.add('done');
 }
 
+function updateEmailBtn() {
+  const btn = document.getElementById('email-btn');
+  if (!btn) return;
+  const t = btn.querySelector('.email-btn-text');
+  if (t) t.textContent = S.outreachEmail ? 'View email' : 'Generate email';
+}
+
+function updateSlackBtn() {
+  const btn = document.getElementById('slack-btn');
+  if (!btn) return;
+  const t = btn.querySelector('.slack-btn-text');
+  if (t) t.textContent = S.outreachSlack ? 'View Slack message' : 'Generate Slack message';
+}
+
+function showEmailPanel(email) {
+  const area = document.getElementById('o-out-area');
+  const chip = document.getElementById('o-out-chip');
+  const subjectRow = document.getElementById('o-email-subject');
+  area.style.display = 'block';
+  chip.textContent = 'External recruitment email';
+  chip.style.background = '#eff6ff';
+  chip.style.color = '#1d4ed8';
+  subjectRow.style.display = 'block';
+  document.getElementById('o-out-subject').value = email.subject || '';
+  document.getElementById('o-out-text').value = email.body || '';
+  document.getElementById('o-save-btn').style.display = '';
+}
+
+function saveOutreachEmail() {
+  S.outreachEmail = {
+    subject: document.getElementById('o-out-subject').value,
+    body: document.getElementById('o-out-text').value,
+  };
+  saveState();
+  toast('Email saved');
+}
+
 async function genOutreach(type) {
+  // External email: toggle if already generated
+  if (type === 'external-email') {
+    if (S.outreachEmail) {
+      const area = document.getElementById('o-out-area');
+      if (area.style.display !== 'none' && document.getElementById('o-email-subject').style.display !== 'none') {
+        area.style.display = 'none';
+      } else {
+        showEmailPanel(S.outreachEmail);
+      }
+      return;
+    }
+    // Generate for the first time
+    const area = document.getElementById('o-out-area');
+    const text = document.getElementById('o-out-text');
+    const chip = document.getElementById('o-out-chip');
+    area.style.display = 'block';
+    document.getElementById('o-email-subject').style.display = 'none';
+    document.getElementById('o-save-btn').style.display = 'none';
+    chip.textContent = 'Generating email…';
+    chip.style.background = '#eff6ff';
+    chip.style.color = '#1d4ed8';
+    text.value = '';
+
+    const objSummary = S.objectives.filter(o => o.objective)
+      .map((o, i) => `${i + 1}. [${o.priority}] ${o.objective}`).join('\n')
+      || 'Understanding user workflow pain points';
+    const methodology = S.objectives.filter(o => o.methodology).map(o => o.methodology).join('; ') || '30-minute virtual session';
+    const targetParts = S.objectives.filter(o => o.participants).map(o => o.participants).join('; ') || 'relevant users';
+    const researcher = (S.researcher || []).join(', ') || '[Researcher Name]';
+
+    const prompt = `Fill in this participant recruitment email template using the project context below. Replace ALL bracketed placeholders with specific details. Return ONLY a JSON object with no markdown: {"subject":"...","body":"..."}
+
+TEMPLATE TO FILL:
+Hi [Customer's First Name],
+
+We're looking for ways to make [product or feature] better for customers like you. To do that, we'd love to hear your feedback!
+
+We're conducting a research study to understand how we can improve [specific aspects of the product/service]. Your insights would be incredibly valuable in shaping our next steps.
+
+What's involved
+• A [duration] virtual session with one of our team members.
+• Sharing your honest thoughts about [specific product feature or topic].
+
+When
+• [Provide date range or scheduling flexibility, e.g., "At a time that's convenient for you in the next two weeks."]
+
+What's in it for you
+• [A $amount gift card/reward, or simply "the opportunity to shape the future of [Product/Service Name]."]
+
+Interested?
+Click [here to schedule your session] or reply to this email with your availability, and we'll handle the rest.
+
+We look forward to hearing from you!
+
+Best regards,
+${researcher}
+Researcher
+[Contact Information]
+Kong
+
+PROJECT CONTEXT:
+Project: "${S.projectName || 'User research study'}"
+Product area: ${S.area || ''}
+Purpose: ${S.purpose || 'Understanding user needs'}
+${S.context ? 'Context: ' + S.context : ''}
+Target participants: ${targetParts}
+Methodology: ${methodology}
+Learning objectives:
+${objSummary}
+
+For the subject line use the pattern: "Help us improve [specific product/feature from context]!"`;
+
+    try {
+      const data = await callAgent(prompt);
+      S.outreachEmail = { subject: data.subject || '', body: data.body || '' };
+      saveState();
+      updateEmailBtn();
+      showEmailPanel(S.outreachEmail);
+    } catch (e) {
+      text.value = 'Generation failed — fill in project details in Setup first.';
+    }
+    return;
+  }
+
+  // Internal Slack — toggle if already generated
+  if (S.outreachSlack) {
+    const area = document.getElementById('o-out-area');
+    const isSlackVisible = area.style.display !== 'none' && document.getElementById('o-email-subject').style.display === 'none';
+    if (isSlackVisible) { area.style.display = 'none'; return; }
+    showSlackPanel(S.outreachSlack);
+    return;
+  }
+
+  // Generate for the first time
   const area = document.getElementById('o-out-area');
   const text = document.getElementById('o-out-text');
   const chip = document.getElementById('o-out-chip');
   area.style.display = 'block';
-  text.textContent = 'Generating…';
-  chip.textContent = type === 'internal-slack' ? 'Internal Slack message' : 'External recruitment email';
-  chip.style.background = type === 'internal-slack' ? '#fdf4ff' : '#eff6ff';
-  chip.style.color = type === 'internal-slack' ? '#7c3aed' : '#1d4ed8';
+  document.getElementById('o-email-subject').style.display = 'none';
+  document.getElementById('o-save-btn').style.display = 'none';
+  chip.textContent = 'Generating Slack message…';
+  chip.style.background = '#fdf4ff';
+  chip.style.color = '#7c3aed';
+  text.value = '';
 
   const objSummary = S.objectives.filter(o => o.objective)
-    .map((o, i) => `${i + 1}. [${o.priority}] ${o.objective}`).join('\n')
-    || 'Understanding user workflow pain points';
-  const projCtx = `Project: "${S.projectName || 'User research study'}". Purpose: ${S.purpose || 'Understanding user needs'}. ${S.context ? 'Context: ' + S.context : ''}`;
+    .map(o => `• ${o.objective}`).join('\n') || '• Understanding user workflow pain points';
+  const researcher = (S.researcher || []).join(', ') || '[your name]';
+  const methodology = S.objectives.filter(o => o.methodology).map(o => o.methodology).join('; ');
+  const duration = methodology.toLowerCase().includes('45') ? '45' : '30';
 
-  const prompt = type === 'internal-slack'
-    ? `Generate an internal Slack message for a user research study.\n${projCtx}\nLearning objectives:\n${objSummary}\n\nCasual, brief (3-5 sentences), invite for 30-45 min session, mention what we're learning. Return as {"message":"..."}`
-    : `Generate an external recruitment email for a user research study.\n${projCtx}\nLearning objectives:\n${objSummary}\n\nProfessional but warm. Why their perspective matters, what's involved (30-45 min), clear CTA. Return as {"subject":"...","body":"..."}`;
+  const prompt = `Generate an internal Slack message to recruit a colleague for a user research study.
+
+Follow this exact template style — keep it brief, casual, and direct (2–4 sentences max):
+
+"Hey [First Name], I'm ${researcher} from the design team. I'm working on a study on how [research topic from context]. [One optional sentence: a specific observation about why this person would be helpful, if context supports it.] I thought you could be a really helpful person to talk to before we take this further. Would you be open to a ${duration}-minute chat?"
+
+Rules:
+- Use [First Name] as the placeholder for the recipient's name
+- Base "research topic" on the purpose/context/objectives below — be specific, not generic
+- The optional observation should feel personal and insightful if context supports it, otherwise omit it
+- No subject line, no sign-off, no emojis
+- Return ONLY: {"message":"..."}
+
+PROJECT CONTEXT:
+Project: "${S.projectName || 'User research study'}"
+Purpose: ${S.purpose || ''}
+${S.context ? 'Context: ' + S.context : ''}
+Product area: ${S.area || ''}
+Learning objectives:
+${objSummary}`;
 
   try {
     const data = await callAgent(prompt);
-    text.textContent = type === 'internal-slack'
-      ? (data.message || 'Could not generate message')
-      : `Subject: ${data.subject || ''}\n\n${data.body || ''}`;
+    S.outreachSlack = data.message || '';
+    saveState();
+    updateSlackBtn();
+    showSlackPanel(S.outreachSlack);
   } catch (e) {
-    text.textContent = 'Generation failed — fill in project name and objectives in Setup first.';
+    text.value = 'Generation failed — fill in project details in Setup first.';
   }
 }
 
+function showSlackPanel(message) {
+  const area = document.getElementById('o-out-area');
+  const chip = document.getElementById('o-out-chip');
+  area.style.display = 'block';
+  document.getElementById('o-email-subject').style.display = 'none';
+  document.getElementById('o-save-btn').style.display = 'none';
+  chip.textContent = 'Internal Slack message';
+  chip.style.background = '#fdf4ff';
+  chip.style.color = '#7c3aed';
+  document.getElementById('o-out-text').value = message;
+}
+
 function copyOut() {
-  navigator.clipboard.writeText(document.getElementById('o-out-text').textContent);
+  const subject = document.getElementById('o-out-subject');
+  const body = document.getElementById('o-out-text').value;
+  const full = subject.style.display !== 'none' && subject.value
+    ? `Subject: ${subject.value}\n\n${body}`
+    : body;
+  navigator.clipboard.writeText(full);
   toast('Copied to clipboard');
 }
 
 // ── Analysis ──────────────────────────────────
 async function runAnalysis() {
-  const btn = document.getElementById('a-btn');
-  btn.textContent = 'Analysing…';
-  btn.disabled = true;
+  const initBtn = document.getElementById('a-btn');
+  const reBtn   = document.getElementById('a-reanalyze-btn');
+  if (initBtn) { initBtn.textContent = 'Analysing…'; initBtn.disabled = true; }
+  if (reBtn)   { reBtn.textContent   = 'Analysing…'; reBtn.disabled   = true; }
   readObjectives();
 
   const completed = S.participants.filter(p => p.status === 'completed');
   const participantData = completed.length
-    ? completed.map(p => `PARTICIPANT: ${p.name} (${p.role}${p.company ? ' at ' + p.company : ''})\nTRANSCRIPT:\n${p.transcript || 'No transcript pasted — mark as completed and add via Outreach tab.'}`).join('\n\n---\n\n')
+    ? completed.map(p => `PARTICIPANT: ${p.name} (${p.role}${p.company ? ' at ' + p.company : ''})\nTRANSCRIPT:\n${p.transcript || 'No transcript — include any verbal notes you have.'}`).join('\n\n---\n\n')
     : 'No completed interviews. Simulate findings for a study on researcher workflow fragmentation (Notion, Calendly, Dovetail, etc.) with 3 participants.';
 
   const objList = S.objectives.filter(o => o.objective)
     .map((o, i) => `${i + 1}. [${o.priority}] ${o.objective}`)
     .join('\n') || '1. [Must] Understand pain points in researcher workflow across tools';
 
-  const prompt = `Analyze these research interviews. Segment FIRST by participant, then within each participant map to each objective. Generate cross-interview synthesis too.
+  const prompt = `Analyze these research interviews. For each participant, map their findings to every learning objective. For each objective entry write a detailed, in-depth finding (2-3 sentences) specific to that objective: what this person does or experiences, the tension or key insight, and why it matters — enough that a reader gets the full picture without needing the transcript. Include 1-2 verbatim quotes that best support the finding. Also write a cross-interview synthesis.
 
 PROJECT: ${S.projectName || 'User research study'}
 PURPOSE: ${S.purpose || 'Understanding user needs'}
@@ -489,11 +897,12 @@ Return the full JSON structure.`;
     S.analysisResult = { participants: data.participants || [] };
     S.synthesisResult = data.synthesis || null;
     renderAnalysis(data);
+    saveState();
     document.getElementById('nav-analysis').classList.add('done');
     toast('Analysis complete');
   } catch (e) {
-    btn.textContent = 'Create analysis';
-    btn.disabled = false;
+    if (initBtn) { initBtn.textContent = 'Create analysis'; initBtn.disabled = false; }
+    if (reBtn)   { reBtn.textContent   = 'Re-analyze';      reBtn.disabled   = false; }
     toast('Analysis failed: ' + e.message);
     console.error(e);
   }
@@ -505,34 +914,32 @@ function renderAnalysis(data) {
   out.style.display = 'flex';
   out.innerHTML = '';
 
-  // Per participant
-  if (data.participants?.length) {
-    out.innerHTML += `<div class="panel">
-      <div class="ptitle">Per participant — mapped to objectives</div>
-      ${data.participants.map(pu => `
-        <div class="ah">
-          <div class="pav" style="width:30px;height:30px;font-size:11px;flex-shrink:0">${initials(pu.name)}</div>
-          ${esc(pu.name)}<span class="ah-sub">${esc(pu.role)}</span>
-        </div>
-        ${pu.summary ? `<div style="font-size:13px;color:var(--t2);line-height:1.6;margin-bottom:10px;padding:8px 12px;background:var(--page);border-radius:var(--rsm)">${esc(pu.summary)}</div>` : ''}
-        ${(pu.byObjective || []).map((ob, i) => `
-          <div class="obj-sh">Objective ${i + 1}: ${esc(ob.objective)}</div>
-          <div class="fi-t" style="margin-bottom:4px">${esc(ob.finding)}</div>
-          <span class="conf c${(ob.confidence || 'm')[0]}" style="margin-bottom:8px;display:inline-block">${ob.confidence || 'medium'}</span>
-          ${(ob.quotes || []).map(q => `<div class="qb">"${esc(q)}"</div>`).join('')}
-        `).join('')}
-      `).join('<hr style="margin:16px 0">')}
-    </div>`;
-  }
-
-  // Synthesis
+  const participants = data.participants || S.analysisResult?.participants || [];
   const syn = data.synthesis || S.synthesisResult;
+  S.synthesisResult = syn;
+
+  // ── Header row with Re-analyze button ─────────────────────────────────────
+  out.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between">
+    <div style="font-size:12px;color:var(--t3)">${participants.length} participant${participants.length !== 1 ? 's' : ''} analysed</div>
+    <button class="btn" id="a-reanalyze-btn" onclick="runAnalysis()">Re-analyze</button>
+  </div>`;
+
+  // ── 1. Synthesis at top ────────────────────────────────────────────────────
   if (syn) {
-    let h = `<div class="panel"><div class="ptitle">Synthesis — cross-interview patterns</div>`;
-    if (syn.tldr) h += `<div style="font-size:14px;line-height:1.7;padding:12px 14px;background:var(--page);border-radius:var(--rsm);margin-bottom:14px">${esc(syn.tldr)}</div>`;
+    let h = `<div class="panel">
+      <div class="ptitle">Synthesis</div>`;
+    if (syn.tldr) {
+      h += `<div style="font-size:14px;line-height:1.7;padding:12px 14px;background:var(--page);border-radius:var(--rsm);margin-bottom:14px">${esc(syn.tldr)}</div>`;
+    }
     if (syn.themes?.length) {
       h += `<div class="ptitle" style="margin-top:4px">Themes</div>`;
-      h += syn.themes.map(t => `<div style="padding:10px 0;border-bottom:1px solid var(--border-lt)"><div style="font-weight:500;font-size:13px;margin-bottom:3px">${esc(t.name)}</div><div class="fi-t">${esc(t.description)}</div>${t.participants ? `<div style="font-size:11px;color:var(--t3);margin-top:3px">↳ ${esc(t.participants)}</div>` : ''}</div>`).join('');
+      h += syn.themes.map(t =>
+        `<div style="padding:10px 0;border-bottom:1px solid var(--border-lt)">
+          <div style="font-weight:500;font-size:13px;margin-bottom:3px">${esc(t.name)}</div>
+          <div class="fi-t">${esc(t.description)}</div>
+          ${t.participants ? `<div style="font-size:11px;color:var(--t3);margin-top:3px">↳ ${esc(t.participants)}</div>` : ''}
+        </div>`
+      ).join('');
     }
     if (syn.topPainPoints?.length) {
       h += `<div class="ptitle" style="margin-top:14px">Top pain points</div>`;
@@ -549,7 +956,41 @@ function renderAnalysis(data) {
     h += '</div>';
     out.innerHTML += h;
   }
-  S.synthesisResult = syn;
+
+  // ── 2. Objective-first breakdown ───────────────────────────────────────────
+  if (participants.length) {
+    // Collect all unique objectives in order
+    const allObjectives = [];
+    participants.forEach(pu => {
+      (pu.byObjective || []).forEach((ob, i) => {
+        if (!allObjectives[i]) allObjectives[i] = ob.objective;
+      });
+    });
+
+    if (allObjectives.length) {
+      let h = `<div class="panel"><div class="ptitle">Findings by objective</div>`;
+      allObjectives.forEach((objText, i) => {
+        h += `<div class="obj-sh" style="margin-top:${i > 0 ? '20px' : '0'}">Objective ${i + 1}: ${esc(objText)}</div>`;
+        participants.forEach(pu => {
+          const ob = (pu.byObjective || [])[i];
+          if (!ob) return;
+          h += `<div style="margin-bottom:12px;padding:12px 14px;background:var(--page);border-radius:var(--rsm)">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+              <div class="pav" style="width:24px;height:24px;font-size:9px;flex-shrink:0">${initials(pu.name)}</div>
+              <span style="font-size:13px;font-weight:500">${esc(pu.name)}</span>
+              <span style="font-size:11px;color:var(--t3)">${esc(pu.role)}</span>
+              <span class="conf c${(ob.confidence || 'm')[0]}" style="margin-left:auto">${ob.confidence || 'medium'}</span>
+            </div>
+            <p style="font-size:13px;color:var(--t1);line-height:1.65;margin:0 0 8px">${esc(ob.finding)}</p>
+            ${(ob.quotes || []).slice(0, 2).map(q => `<div style="font-size:13px;font-style:italic;color:var(--t2);line-height:1.6;padding:8px 12px;border-left:3px solid var(--border);background:#fff;border-radius:0 var(--rsm) var(--rsm) 0;margin-top:6px">"${esc(q)}"</div>`).join('')}
+          </div>`;
+        });
+      });
+      h += '</div>';
+      out.innerHTML += h;
+    }
+  }
+
 }
 
 // ── Finalize ──────────────────────────────────
@@ -703,11 +1144,11 @@ function buildDocHTML() {
       </tr>
       <tr>
         <td style="padding:8px 16px 8px 0;font-weight:500;font-size:12px;color:#6b7280;border:none">Designer</td>
-        <td style="padding:8px 0;border:none;font-size:13px">${esc(S.designer) || '—'}</td>
+        <td style="padding:8px 0;border:none;font-size:13px">${esc((S.designer||[]).join(', ')) || '—'}</td>
       </tr>
       <tr>
         <td style="padding:8px 16px 8px 0;font-weight:500;font-size:12px;color:#6b7280;border:none">Researcher</td>
-        <td style="padding:8px 0;border:none;font-size:13px">${esc(S.researcher) || '—'}</td>
+        <td style="padding:8px 0;border:none;font-size:13px">${esc((S.researcher||[]).join(', ')) || '—'}</td>
       </tr>
     </tbody>
   </table>
@@ -794,8 +1235,8 @@ function renderDocPreview() {
     <div class="dp-meta">
       <div class="dp-mr"><div class="dp-ml">Date</div><div class="dp-mv">${esc(fmtDate(S.date))}</div></div>
       <div class="dp-mr"><div class="dp-ml">Product area</div><div class="dp-mv">${esc(S.area)}</div></div>
-      <div class="dp-mr"><div class="dp-ml">Designer</div><div class="dp-mv">${esc(S.designer)}</div></div>
-      <div class="dp-mr"><div class="dp-ml">Researcher</div><div class="dp-mv">${esc(S.researcher)}</div></div>
+      <div class="dp-mr"><div class="dp-ml">Designer</div><div class="dp-mv">${esc((S.designer||[]).join(', '))}</div></div>
+      <div class="dp-mr"><div class="dp-ml">Researcher</div><div class="dp-mv">${esc((S.researcher||[]).join(', '))}</div></div>
     </div>
     <div class="dp-sh">Purpose</div>
     <div class="dp-purpose">${S.purpose ? esc(S.purpose) : '<span style="color:#9ca3af;font-style:italic">Not filled in yet</span>'}</div>
@@ -810,5 +1251,18 @@ function renderDocPreview() {
 }
 
 // ── Init ──────────────────────────────────────
-addObjRow({ priority: 'Must' });
+if (loadState()) {
+  restoreUI();
+} else {
+  addObjRow({ priority: 'Must' });
+}
 goTo('setup');
+
+// Auto-save listeners for Setup fields
+['f-name','f-date','f-area','f-purpose','f-context'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', scheduleAutoSave);
+  document.getElementById(id)?.addEventListener('change', scheduleAutoSave);
+});
+// Objectives — event delegation (handles dynamic rows)
+document.getElementById('obj-rows').addEventListener('input', scheduleAutoSave);
+document.getElementById('obj-rows').addEventListener('change', scheduleAutoSave);

@@ -39,7 +39,7 @@
     </div>
     <div class="tb-title" id="tb-title">New project</div>
     <div class="tb-right">
-      <span class="tb-pill" id="tb-pill">0 / 0 interviews</span>
+      <button class="btn sm" onclick="newProject()" title="Start a new project">+ New research</button>
       <button class="ib" id="prev-btn" onclick="openDrawer()" title="Preview doc">
         <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
           <path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.4"/>
@@ -77,6 +77,19 @@
 
     <!-- ══ SETUP ══ -->
     <div class="page active" id="page-setup">
+
+      <div class="panel ai-panel">
+        <div class="ptitle" style="color:var(--blue)">
+          <span>✦ Fill with AI</span>
+          <span class="hint" style="font-weight:400;text-transform:none;letter-spacing:0;margin-left:8px">Describe your research and we'll fill the fields below</span>
+        </div>
+        <textarea class="ta" id="ai-input" style="min-height:90px" placeholder="e.g. We're researching how enterprise developers onboard to our API gateway. We want to understand pain points in the first 30 min, what docs they reference, and where they drop off. Target users: developers new to Kong Konnect. Method: moderated usability test."></textarea>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:10px">
+          <button class="btn filled ai-btn" id="ai-fill-btn" onclick="fillWithAI()">✦ Generate fields</button>
+          <span id="ai-fill-status" class="hint"></span>
+        </div>
+      </div>
+
       <div class="panel">
         <div class="ptitle">Project details</div>
         <div class="g3" style="margin-bottom:12px">
@@ -85,8 +98,31 @@
           <div><label class="fl">Product area</label><input class="inp" id="f-area" placeholder="e.g. Core Platform"/></div>
         </div>
         <div class="g2" style="margin-bottom:12px">
-          <div><label class="fl">Designer</label><input class="inp" id="f-designer" placeholder="Designer name"/></div>
-          <div><label class="fl">Researcher</label><input class="inp" id="f-researcher" placeholder="Researcher name"/></div>
+          <div>
+            <label class="fl">Designer</label>
+            <div class="pill-field">
+              <div class="pills" id="designer-pills"></div>
+              <select class="pill-add" onchange="addPerson('designer', this)">
+                <option value="">+ Add designer</option>
+                <option>Ally</option><option>Andras</option><option>Erick</option>
+                <option>Helen</option><option>Janmesh</option><option>Jason</option>
+                <option>Jenya</option><option>Jessica</option><option>Julie</option>
+                <option>Julieta</option><option>Katrina</option><option>Missy</option>
+                <option>Mo</option><option>Salomon</option><option>Santhosh</option>
+                <option>Shikha</option><option>Sid</option><option>Travis</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="fl">Researcher</label>
+            <div class="pill-field">
+              <div class="pills" id="researcher-pills"></div>
+              <select class="pill-add" onchange="addPerson('researcher', this)">
+                <option value="">+ Add researcher</option>
+                <option>Shikha</option>
+              </select>
+            </div>
+          </div>
         </div>
         <div style="margin-bottom:12px">
           <label class="fl">Purpose</label>
@@ -118,10 +154,6 @@
         <div style="margin-top:8px"><button class="btn sm" onclick="addObjRow()">+ Add row</button></div>
       </div>
 
-      <div style="display:flex;gap:10px;align-items:center">
-        <button class="btn filled" onclick="saveSetup()" id="save-btn">Save & continue</button>
-        <span id="save-status" class="hint"></span>
-      </div>
     </div>
 
     <!-- ══ PARTICIPANTS ══ -->
@@ -190,24 +222,29 @@
         <div class="ptitle">
           Sample outreach messages
           <div class="r">
-            <button class="btn slack sm" onclick="genOutreach('internal-slack')">
+            <button class="btn slack sm" id="slack-btn" onclick="genOutreach('internal-slack')">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 15a2 2 0 0 1-2 2 2 2 0 0 1-2-2 2 2 0 0 1 2-2h2zm1 0a2 2 0 0 1 2-2 2 2 0 0 1 2 2v5a2 2 0 0 1-2 2 2 2 0 0 1-2-2zm2-8a2 2 0 0 1-2-2 2 2 0 0 1 2-2 2 2 0 0 1 2 2v2zm0 1a2 2 0 0 1 2 2 2 2 0 0 1-2 2H4a2 2 0 0 1-2-2 2 2 0 0 1 2-2zm8 2a2 2 0 0 1 2-2 2 2 0 0 1 2 2 2 2 0 0 1-2 2h-2zm-1 0a2 2 0 0 1-2 2 2 2 0 0 1-2-2V5a2 2 0 0 1 2-2 2 2 0 0 1 2 2zm-2 8a2 2 0 0 1 2 2 2 2 0 0 1-2 2 2 2 0 0 1-2-2v-2zm0-1a2 2 0 0 1-2-2 2 2 0 0 1 2-2h5a2 2 0 0 1 2 2 2 2 0 0 1-2 2z"/></svg>
-              Internal Slack
+              <span class="slack-btn-text">Generate Slack message</span>
             </button>
-            <button class="btn email sm" onclick="genOutreach('external-email')">
+            <button class="btn email sm" id="email-btn" onclick="genOutreach('external-email')">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" stroke-width="1.5"/><polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="1.5"/></svg>
-              External email
+              <span class="email-btn-text">Generate email</span>
             </button>
           </div>
         </div>
         <p class="hint" style="margin-bottom:14px">Generated from your project name, purpose, context, and learning objectives. Use as a starting template.</p>
         <div id="o-out-area" style="display:none">
-          <div style="display:flex;gap:8px;margin-bottom:8px">
+          <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
             <span class="chip" id="o-out-chip" style="background:#f3f4f6;color:#374151">—</span>
           </div>
-          <div class="opanel" id="o-out-text"></div>
-          <div style="margin-top:10px;display:flex;gap:8px">
-            <button class="btn sm filled" onclick="copyOut()">Copy</button>
+          <div id="o-email-subject" style="display:none;margin-bottom:10px">
+            <label class="fl">Subject</label>
+            <input class="inp" id="o-out-subject" placeholder="Email subject line"/>
+          </div>
+          <textarea class="ta" id="o-out-text" style="min-height:300px;font-family:inherit;font-size:13px;line-height:1.7"></textarea>
+          <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+            <button class="btn sm filled" id="o-save-btn" style="display:none" onclick="saveOutreachEmail()">Save</button>
+            <button class="btn sm" onclick="copyOut()">Copy</button>
             <button class="btn sm" onclick="document.getElementById('o-out-area').style.display='none'">Dismiss</button>
           </div>
         </div>
@@ -220,9 +257,10 @@
         </div>
         <div id="o-empty" class="hint" style="padding:6px 0">No participants added yet.</div>
         <table class="tbl" id="o-tbl" style="display:none">
-          <thead><tr><th>Name</th><th>Type</th><th>Zoom link</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th>Name</th><th>Type</th><th>Status</th><th>Zoom link</th><th></th></tr></thead>
           <tbody id="o-body"></tbody>
         </table>
+        <input type="file" id="transcript-upload" accept=".vtt,.txt,.srt,.md,.doc,.docx" style="display:none" onchange="handleTranscriptUpload(event)"/>
       </div>
     </div>
 
