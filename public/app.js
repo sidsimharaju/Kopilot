@@ -98,6 +98,7 @@ function restoreUI() {
   // Restore outreach button states
   updateEmailBtn();
   updateSlackBtn();
+  updateAnalysisBtn();
 
   // Restore analysis
   if (S.analysisResult?.participants?.length || S.synthesisResult) {
@@ -587,6 +588,7 @@ function setStatus(id, val) {
   p.status = val;
   refreshOutreach();
   updateBadges();
+  updateAnalysisBtn();
   const nav = document.getElementById('nav-outreach');
   if (S.participants.length && S.participants.every(p => p.status === 'completed' || p.status === 'declined')) {
     nav.classList.add('done');
@@ -637,6 +639,7 @@ function handleTranscriptUpload(e) {
       }
       saveState();
       refreshOutreach();
+      updateAnalysisBtn();
       toast(`Transcript uploaded for ${p.name}`);
     }
   };
@@ -863,7 +866,22 @@ function copyOut() {
 }
 
 // ── Analysis ──────────────────────────────────
+function updateAnalysisBtn() {
+  const btn = document.getElementById('a-btn');
+  if (!btn) return;
+  const hasTranscripts = S.participants.some(p => p.status === 'completed' && p.transcript);
+  btn.disabled = !hasTranscripts;
+  btn.title = hasTranscripts ? '' : 'Add at least one completed interview with a transcript first';
+  const ed = document.querySelector('#a-empty .ed');
+  if (ed) ed.textContent = hasTranscripts
+    ? 'Click below to generate analysis from your transcripts.'
+    : 'You need at least one completed interview with a transcript uploaded before running analysis.';
+}
+
 async function runAnalysis() {
+  const hasTranscripts = S.participants.some(p => p.status === 'completed' && p.transcript);
+  if (!hasTranscripts) { toast('Upload at least one transcript first'); return; }
+
   const initBtn = document.getElementById('a-btn');
   const reBtn   = document.getElementById('a-reanalyze-btn');
   if (initBtn) { initBtn.textContent = 'Analysing…'; initBtn.disabled = true; }
@@ -901,7 +919,7 @@ Return the full JSON structure.`;
     document.getElementById('nav-analysis').classList.add('done');
     toast('Analysis complete');
   } catch (e) {
-    if (initBtn) { initBtn.textContent = 'Create analysis'; initBtn.disabled = false; }
+    if (initBtn) { initBtn.textContent = 'Create analysis'; updateAnalysisBtn(); }
     if (reBtn)   { reBtn.textContent   = 'Re-analyze';      reBtn.disabled   = false; }
     toast('Analysis failed: ' + e.message);
     console.error(e);
@@ -1266,3 +1284,15 @@ goTo('setup');
 // Objectives — event delegation (handles dynamic rows)
 document.getElementById('obj-rows').addEventListener('input', scheduleAutoSave);
 document.getElementById('obj-rows').addEventListener('change', scheduleAutoSave);
+
+// Flush any pending debounce and save immediately before refresh / tab close
+window.addEventListener('beforeunload', () => {
+  clearTimeout(_autoSaveTimer);
+  S.projectName = document.getElementById('f-name')?.value || S.projectName;
+  S.date        = document.getElementById('f-date')?.value || S.date;
+  S.area        = document.getElementById('f-area')?.value || S.area;
+  S.purpose     = document.getElementById('f-purpose')?.value || S.purpose;
+  S.context     = document.getElementById('f-context')?.value || S.context;
+  readObjectives();
+  saveState();
+});
