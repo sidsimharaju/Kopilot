@@ -27,7 +27,7 @@ app.post('/api/agent', async (req, res) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${(process.env.OPENAI_API_KEY || '').replace(/^Bearer\s+/i, '')}`,
+        'Authorization': `Bearer ${(process.env.OPENAI_API_KEY || '').replace(/^Bearer\s+/i, '').trim()}`,
       },
       body: JSON.stringify({
         model: 'gpt-4o',
