@@ -888,9 +888,18 @@ async function runAnalysis() {
   if (reBtn)   { reBtn.textContent   = 'Analysing…'; reBtn.disabled   = true; }
   readObjectives();
 
+  // Cap each transcript at ~5 000 chars to stay within OpenAI's TPM limits.
+  // ~4 chars ≈ 1 token, so 5 000 chars ≈ 1 250 tokens per participant.
+  const TRANSCRIPT_CHAR_LIMIT = 5000;
   const completed = S.participants.filter(p => p.status === 'completed');
   const participantData = completed.length
-    ? completed.map(p => `PARTICIPANT: ${p.name} (${p.role}${p.company ? ' at ' + p.company : ''})\nTRANSCRIPT:\n${p.transcript || 'No transcript — include any verbal notes you have.'}`).join('\n\n---\n\n')
+    ? completed.map(p => {
+        const raw = p.transcript || 'No transcript — include any verbal notes you have.';
+        const truncated = raw.length > TRANSCRIPT_CHAR_LIMIT
+          ? raw.slice(0, TRANSCRIPT_CHAR_LIMIT) + '\n[transcript truncated for length]'
+          : raw;
+        return `PARTICIPANT: ${p.name} (${p.role}${p.company ? ' at ' + p.company : ''})\nTRANSCRIPT:\n${truncated}`;
+      }).join('\n\n---\n\n')
     : 'No completed interviews. Simulate findings for a study on researcher workflow fragmentation (Notion, Calendly, Dovetail, etc.) with 3 participants.';
 
   const objList = S.objectives.filter(o => o.objective)
@@ -911,7 +920,7 @@ ${participantData}
 Return the full JSON structure.`;
 
   try {
-    const data = await callAgent(prompt, { max_tokens: 4000 });
+    const data = await callAgent(prompt, { max_tokens: 2500 });
     S.analysisResult = { participants: data.participants || [] };
     S.synthesisResult = data.synthesis || null;
     renderAnalysis(data);
