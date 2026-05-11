@@ -46,9 +46,16 @@
   <div class="dh">
     <div>
       <div class="dh-title">Research plan preview</div>
-      <div class="dh-sub" id="dsub">Live view of your Google Doc</div>
+      <div class="dh-sub" id="dsub">Live view of your research plan</div>
     </div>
-    <button class="dclose" onclick="closeDrawer()">×</button>
+    <div style="display:flex;align-items:center;gap:6px">
+      <button class="ib tip" onclick="downloadAsPDF()" data-tip="Download as PDF" style="color:var(--t2)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+      </button>
+      <button class="dclose" onclick="closeDrawer()">×</button>
+    </div>
   </div>
   <div class="dbody"><div class="docprev" id="docprev"></div></div>
 </div>
@@ -72,19 +79,10 @@
     </div>
     <div class="tb-title" id="tb-title">New project</div>
     <div class="tb-right">
-      <button class="btn sm filled" onclick="generateDocument()">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="margin-right:4px;vertical-align:-2px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="1.5"/><polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="1.5"/></svg>
-        Generate document
-      </button>
       <button class="ib tip" id="prev-btn" onclick="openDrawer()" data-tip="Preview document">
         <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
           <path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.4"/>
           <circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.4"/>
-        </svg>
-      </button>
-      <button class="ib tip" onclick="exportDocument()" data-tip="Export as .txt">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
         </svg>
       </button>
       <a class="ib tip" href="https://calendar.google.com/calendar/u/0/appointments/schedules/AcZssZ0bZDEAafZ3V3A1SbI4Vg8-G_Y6RcdKcTtwdesn2xTDBSG9eHwE2erp6lloTCz85Bz2s7XL-H6u" target="_blank" data-tip="Book time with Shikha">

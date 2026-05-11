@@ -639,18 +639,31 @@ function handleDocImport(e) {
   reader.readAsText(file);
 }
 
-// ── Export document ────────────────────────────
-function exportDocument() {
+// ── PDF download ──────────────────────────────
+function downloadAsPDF() {
   renderDocPreview();
-  const content = document.getElementById('docprev')?.innerText || 'No document generated yet.';
-  const name = (S.projectName || 'research-plan').replace(/[^a-z0-9]/gi, '-').toLowerCase();
-  const blob = new Blob([content], { type: 'text/plain' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `${name}.txt`;
-  a.click();
-  URL.revokeObjectURL(a.href);
-  toast('Document exported');
+  const content = document.getElementById('docprev')?.innerHTML || '<p>No document generated yet. Click "Generate document" first.</p>';
+  const name = S.projectName || 'Research Plan';
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>${name}</title><style>
+    body{font-family:'Inter',system-ui,sans-serif;max-width:720px;margin:40px auto;color:#1a1a1a;line-height:1.6;font-size:13px}
+    h1{font-size:20px;font-weight:700;margin-bottom:4px}
+    h2{font-size:14px;font-weight:700;margin:24px 0 8px;text-transform:uppercase;letter-spacing:.06em;color:#374151;border-bottom:1px solid #e5e7eb;padding-bottom:4px}
+    table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px}
+    th{background:#f3f4f6;padding:6px 10px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#6b7280}
+    td{padding:7px 10px;border-bottom:1px solid #f3f4f6;vertical-align:top}
+    .dp-meta{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;font-size:12px;color:#6b7280}
+    .dp-mr{min-width:120px}.dp-ml{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:2px}.dp-mv{color:#111827;font-weight:500}
+    .dp-pri{display:inline-block;padding:1px 7px;border-radius:3px;font-size:10px;font-weight:600;text-transform:uppercase}
+    .dp-pri.must{background:#fee2e2;color:#991b1b}.dp-pri.should{background:#fef3c7;color:#92400e}.dp-pri.could{background:#ede9fe;color:#5b21b6}.dp-pri.maybe.later{background:#f3f4f6;color:#6b7280}
+    .dp-pr{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #f9fafb;font-size:12px}
+    .dp-pn{font-weight:500}.dp-pst{padding:1px 7px;border-radius:3px;font-size:10px;font-weight:600;text-transform:uppercase;background:#f3f4f6;color:#374151}
+    .dp-purpose{font-size:13px;color:#374151;margin-bottom:12px;line-height:1.65}
+    @media print{body{margin:20px}}
+  </style></head><body>${content}</body></html>`);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 400);
 }
 
 // ── AI fill (setup page) ───────────────────────
