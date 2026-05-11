@@ -469,11 +469,12 @@
             <div class="source-step-num">1</div>
             <div class="source-step-body">
               <div class="source-step-title">Find people using Rovo</div>
-              <p class="hint" style="line-height:1.6;margin-bottom:10px">Rovo searches across Confluence and has role, team, and timezone data for everyone at Kong. Copy this prompt, open Rovo directly (not Claude or Cowork), and search. Results are a starting list. Use your judgement.</p>
+              <p class="hint" style="line-height:1.6;margin-bottom:10px">Rovo searches Confluence for role, team, and timezone data across Kong. Edit the prompt below if needed, then open Rovo and search. Results are a starting list — use your judgement.</p>
               <div class="prompt-card">
-                <div class="prompt-card-text" id="rovo-prompt-text">Building prompt from your project…</div>
+                <textarea class="prompt-card-ta" id="rovo-prompt-text" rows="5" placeholder="Generating prompt from your project…"></textarea>
                 <div style="display:flex;gap:6px;margin-top:10px">
-                  <button class="btn sm filled" onclick="copyPrompt('rovo')">Copy prompt</button>
+                  <a class="btn sm filled" id="rovo-open-btn" href="https://rovo.atlassian.com" target="_blank">Open Rovo →</a>
+                  <button class="btn sm" onclick="copyPrompt('rovo')">Copy prompt</button>
                 </div>
               </div>
             </div>
@@ -483,12 +484,36 @@
             <div class="source-step-num">2</div>
             <div class="source-step-body">
               <div class="source-step-title">Add them here</div>
-              <p class="hint" style="line-height:1.6;margin-bottom:10px">Once you have names from Rovo, add them below. The audience type you pick (fresh eyes, adjacent product, role match) determines which message template generates for them.</p>
+              <p class="hint" style="line-height:1.6;margin-bottom:10px">Add people from Rovo. The audience type determines which message template generates for them.</p>
+              <div id="added-preview-internal" style="display:none;margin-bottom:10px"></div>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button class="btn sm filled" onclick="openAddPanel('internal')">+ Add person</button>
+                <button class="btn sm filled" onclick="toggleInlineAdd('internal')">+ Add person</button>
                 <button class="btn sm" onclick="triggerCSVUpload('internal')">+ Upload CSV</button>
               </div>
-              <div id="added-preview-internal" style="display:none;margin-top:10px"></div>
+              <div id="inline-add-internal" class="inline-add-form" style="display:none">
+                <div class="g2" style="margin-bottom:8px">
+                  <div><label class="fl">Full name</label><input class="inp" id="ila-name-internal" placeholder="Jane Doe"/></div>
+                  <div><label class="fl">Role / Title</label><input class="inp" id="ila-role-internal" placeholder="Senior Engineer"/></div>
+                </div>
+                <div class="g2" style="margin-bottom:8px">
+                  <div><label class="fl">Team / Company</label><input class="inp" id="ila-company-internal" placeholder="Platform team"/></div>
+                  <div><label class="fl">Slack handle</label><input class="inp" id="ila-contact-internal" placeholder="@jane"/></div>
+                </div>
+                <div style="margin-bottom:10px">
+                  <label class="fl">Audience type</label>
+                  <select class="sel" id="ila-audience-internal" style="max-width:320px">
+                    <option value="internal-fresh">Fresh eyes: hasn't worked on this product</option>
+                    <option value="internal-adjacent">Adjacent product: knows the platform, not this flow</option>
+                    <option value="internal-rolematch">Role match: same role as the people you're building for</option>
+                    <option value="se">Solutions engineer</option>
+                    <option value="field-engineer">Field / platform engineer</option>
+                  </select>
+                </div>
+                <div style="display:flex;gap:8px">
+                  <button class="btn sm filled" onclick="submitInlineAdd('internal')">Add</button>
+                  <button class="btn sm" onclick="toggleInlineAdd('internal')">Cancel</button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -521,7 +546,7 @@
               <div class="source-step-title">Find engaged orgs using Hex</div>
               <p class="hint" style="line-height:1.6;margin-bottom:10px">Hex pulls real product usage data so you can find orgs actively using the area you're researching. Follow the steps, export, and filter your shortlist.</p>
               <div class="prompt-card">
-                <div class="prompt-card-text" id="hex-prompt-text">Building guidance from your project…</div>
+                <textarea class="prompt-card-ta" id="hex-prompt-text" rows="6" placeholder="Building guidance from your project…"></textarea>
                 <div style="display:flex;gap:6px;margin-top:10px">
                   <a class="btn sm filled" href="https://app.hex.tech/941dd486-551d-4fd3-812a-20e7c7bf4a42/app/Dynamic-Funnel-Analysis-031rpYfzR1vfSUhEaMMYyn/latest?tab=front-end-engagement---plug-and-play-query" target="_blank">Open Hex →</a>
                   <button class="btn sm" onclick="copyPrompt('hex')">Copy guidance</button>
@@ -535,11 +560,26 @@
             <div class="source-step-body">
               <div class="source-step-title">Add the CSMs you'll reach out to</div>
               <p class="hint" style="line-height:1.6;margin-bottom:10px">The ACCOUNT_OWNER column in Hex gives you the CSM for each org. Add them here — they're your first contact. Never ask CSMs to pick the right customer; you already have that from Hex.</p>
+              <div id="added-preview-customer" style="display:none;margin-bottom:10px"></div>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button class="btn sm filled" onclick="openAddPanel('customer')">+ Add CSM</button>
+                <button class="btn sm filled" onclick="toggleInlineAdd('customer')">+ Add CSM</button>
                 <button class="btn sm" onclick="triggerCSVUpload('customer')">+ Upload CSV from Hex</button>
               </div>
-              <div id="added-preview-customer" style="display:none;margin-top:10px"></div>
+              <div id="inline-add-customer" class="inline-add-form" style="display:none">
+                <div class="g2" style="margin-bottom:8px">
+                  <div><label class="fl">Full name</label><input class="inp" id="ila-name-customer" placeholder="Jane Doe"/></div>
+                  <div><label class="fl">Role / Title</label><input class="inp" id="ila-role-customer" placeholder="Customer Success Manager"/></div>
+                </div>
+                <div class="g2" style="margin-bottom:8px">
+                  <div><label class="fl">Company / Account</label><input class="inp" id="ila-company-customer" placeholder="Acme Corp"/></div>
+                  <div><label class="fl">Slack / Email</label><input class="inp" id="ila-contact-customer" placeholder="@jane or jane@acme.com"/></div>
+                </div>
+                <input type="hidden" id="ila-audience-customer" value="csm"/>
+                <div style="display:flex;gap:8px">
+                  <button class="btn sm filled" onclick="submitInlineAdd('customer')">Add</button>
+                  <button class="btn sm" onclick="toggleInlineAdd('customer')">Cancel</button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -557,27 +597,8 @@
             </div>
           </div>
 
-          <div class="source-step">
-            <div class="source-step-num">4</div>
-            <div class="source-step-body">
-              <div class="source-step-title">Brief for Kong Champions</div>
-              <p class="hint" style="line-height:1.6;margin-bottom:10px">Champions are engaged customers who volunteer — fastest external cohort, usually respond within a week. Send Shikha a Slack message with the brief and she coordinates the request.</p>
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-                <button class="btn sm filled" id="champions-gen-btn" onclick="genChampionsBrief()">✦ Generate brief</button>
-                <span id="champions-status" class="hint"></span>
-              </div>
-              <div id="champions-output" style="display:none">
-                <textarea class="msg-ta" id="champions-text" style="min-height:140px"></textarea>
-                <div style="display:flex;gap:6px;margin-top:8px">
-                  <button class="btn sm filled" onclick="copyChampions()">Copy</button>
-                  <button class="btn sm" onclick="document.getElementById('champions-output').style.display='none'">Dismiss</button>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <div class="source-step" style="border-bottom:none;padding-bottom:0">
-            <div class="source-step-num">5</div>
+            <div class="source-step-num">4</div>
             <div class="source-step-body">
               <div class="source-step-title">Large cohort via Intercom</div>
               <p class="hint" style="line-height:1.6;margin-bottom:10px">For customers without a CSM, or broader unincentivized outreach. Get the email reviewed by Shikha before sending. Upload to Intercom and send in batches of 50–100.</p>
@@ -607,8 +628,23 @@
             <div class="source-step-body">
               <div class="source-step-title">Coordinate with Shikha on Respondent</div>
               <p class="hint" style="line-height:1.6;margin-bottom:10px">Respondent handles sourcing, screening, and incentives. Shikha manages the screener and link. Once participants are confirmed, log them below.</p>
-              <button class="btn sm filled" onclick="openAddPanel('noncustomer')">+ Log confirmed participant</button>
-              <div id="added-preview-noncustomer" style="display:none;margin-top:10px"></div>
+              <div id="added-preview-noncustomer" style="display:none;margin-bottom:10px"></div>
+              <button class="btn sm filled" onclick="toggleInlineAdd('noncustomer')">+ Log confirmed participant</button>
+              <div id="inline-add-noncustomer" class="inline-add-form" style="display:none">
+                <div class="g2" style="margin-bottom:8px">
+                  <div><label class="fl">Full name</label><input class="inp" id="ila-name-noncustomer" placeholder="Jane Doe"/></div>
+                  <div><label class="fl">Role / Title</label><input class="inp" id="ila-role-noncustomer" placeholder="Platform Engineer"/></div>
+                </div>
+                <div class="g2" style="margin-bottom:8px">
+                  <div><label class="fl">Company</label><input class="inp" id="ila-company-noncustomer" placeholder="Acme Corp"/></div>
+                  <div><label class="fl">Email</label><input class="inp" id="ila-contact-noncustomer" placeholder="jane@acme.com"/></div>
+                </div>
+                <input type="hidden" id="ila-audience-noncustomer" value="noncustomer"/>
+                <div style="display:flex;gap:8px">
+                  <button class="btn sm filled" onclick="submitInlineAdd('noncustomer')">Add</button>
+                  <button class="btn sm" onclick="toggleInlineAdd('noncustomer')">Cancel</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

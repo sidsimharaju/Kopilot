@@ -1080,7 +1080,7 @@ function buildRovoPrompt() {
   const purpose = S.purpose ? S.purpose.slice(0, 100) + (S.purpose.length > 100 ? '…' : '') : '';
   const guide = S.methodology === 'usability' ? 'usability test' : S.methodology === 'discovery' ? 'discovery interview' : 'research session';
   const el = document.getElementById('rovo-prompt-text');
-  if (el) el.textContent = `Help me find people internally at Kong who would be good participants for a ${guide} on ${area}.${purpose ? '\n\nContext: ' + purpose : ''}\n\nLook for a mix of: solutions engineers, field engineers, platform engineers, and anyone whose role matches the target user for this study. Include people from different timezones if possible.\n\nNote: Search Rovo directly, not Claude or Cowork. Rovo searches across Confluence which has role, team, and region data for everyone at Kong. Once you have names, DM people directly rather than posting in channels.`;
+  if (el) el.value = `Help me find people internally at Kong who would be good participants for a ${guide} on ${area}.${purpose ? '\n\nContext: ' + purpose : ''}\n\nLook for a mix of: solutions engineers, field engineers, platform engineers, and anyone whose role matches the target user for this study. Include people from different timezones if possible.\n\nNote: Search Rovo directly, not Claude or Cowork. Rovo searches across Confluence which has role, team, and region data for everyone at Kong. Once you have names, DM people directly rather than posting in channels.`;
 }
 
 function buildHexGuidance() {
@@ -1090,12 +1090,37 @@ function buildHexGuidance() {
     : area.toLowerCase().includes('ai') ? 'https://cloud.konghq.com/us/%  (also filter AI_GATEWAY_ACTIVATED = TRUE)'
     : 'https://cloud.konghq.com/us/[feature-path]/%';
   const el = document.getElementById('hex-prompt-text');
-  if (el) el.textContent = `Step-by-step:\n\n1. Open Hex → Section 2: Front-End Engagement Plug & Play Queries\n2. Date range: last 90 days (30 days for recency)\n3. url_pattern for your area:\n   ${urlHint}\n4. Min Distinct URL: 4, Distinct Page Views: 3\n5. Sort by DISTINCT_URLS descending\n6. Filter: BILLING_CLASSIFICATION = enterprise\n7. Check activation flags for your area\n8. ACCOUNT_OWNER column = the CSM to DM on Slack\n9. Export → filter in Google Sheets → add CSMs here`;
+  if (el) el.value = `Step-by-step:\n\n1. Open Hex → Section 2: Front-End Engagement Plug & Play Queries\n2. Date range: last 90 days (30 days for recency)\n3. url_pattern for your area:\n   ${urlHint}\n4. Min Distinct URL: 4, Distinct Page Views: 3\n5. Sort by DISTINCT_URLS descending\n6. Filter: BILLING_CLASSIFICATION = enterprise\n7. Check activation flags for your area\n8. ACCOUNT_OWNER column = the CSM to DM on Slack\n9. Export → filter in Google Sheets → add CSMs here`;
 }
 
 function copyPrompt(type) {
   const el = document.getElementById(type === 'rovo' ? 'rovo-prompt-text' : 'hex-prompt-text');
-  if (el) { navigator.clipboard.writeText(el.textContent); toast('Copied'); }
+  if (el) { navigator.clipboard.writeText(el.value !== undefined ? el.value : el.textContent); toast('Copied'); }
+}
+
+// ── Inline add form ───────────────────────────
+function toggleInlineAdd(cohort) {
+  const form = document.getElementById('inline-add-' + cohort);
+  if (!form) return;
+  const visible = form.style.display !== 'none';
+  form.style.display = visible ? 'none' : 'block';
+  if (!visible) {
+    ['ila-name-','ila-role-','ila-company-','ila-contact-'].forEach(prefix => {
+      const el = document.getElementById(prefix + cohort); if (el) el.value = '';
+    });
+  }
+}
+
+function submitInlineAdd(cohort) {
+  const name = document.getElementById('ila-name-' + cohort)?.value.trim();
+  if (!name) { toast('Name required'); return; }
+  const role    = document.getElementById('ila-role-'    + cohort)?.value.trim() || '';
+  const company = document.getElementById('ila-company-' + cohort)?.value.trim() || '';
+  const contact = document.getElementById('ila-contact-' + cohort)?.value.trim() || '';
+  const audEl   = document.getElementById('ila-audience-' + cohort);
+  const audience = audEl ? audEl.value : (cohort === 'internal' ? 'internal-fresh' : 'csm');
+  addP({ name, role, company, contact, cohort: cohort === 'customer-csm' ? 'customer' : cohort, audience, type: cohort === 'internal' ? 'internal' : 'external' });
+  toggleInlineAdd(cohort);
 }
 
 function renderAddedPreviews() {
