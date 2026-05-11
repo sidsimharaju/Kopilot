@@ -26,6 +26,8 @@ const S = {
   synthesisResult: null,
 };
 let pid = 1, oid = 1, spid = 1;
+let _activeCohortDetail = null;
+let _activeSourceCohort = null;
 
 const DESIGNERS  = ['Ally','Andras','Erick','Helen','Janmesh','Jason','Jenya','Jessica','Julie','Julieta','Katrina','Missy','Mo','Salomon','Santhosh','Shikha','Sid','Travis'];
 const RESEARCHERS = ['Shikha'];
@@ -758,12 +760,55 @@ function toggleCohortSel(cohort) {
 function applyCohortSel(cohort) {
   const selected = S.cohorts?.[cohort] || false;
   document.getElementById('csel-' + cohort)?.classList.toggle('selected', selected);
-  const detail = document.getElementById('cdetail-' + cohort);
-  if (detail) detail.style.display = selected ? 'block' : 'none';
+  refreshCohortDetailTabs(cohort, selected);
+}
+
+function refreshCohortDetailTabs(justToggled, justSelected) {
+  const COHORTS = ['internal', 'customers', 'noncustomers'];
+  const selected = COHORTS.filter(c => S.cohorts?.[c]);
+
+  // If the just-toggled cohort was newly selected, make it the active tab
+  if (justToggled && justSelected) _activeCohortDetail = justToggled;
+  // If active tab was just deselected, pick the first remaining selected cohort
+  if (!S.cohorts?.[_activeCohortDetail]) {
+    _activeCohortDetail = selected[0] || null;
+  }
+
+  const strip = document.getElementById('cohort-detail-tabstrip');
+  if (!strip) return;
+
+  if (!selected.length) {
+    strip.style.display = 'none';
+    COHORTS.forEach(c => { const d = document.getElementById('cdetail-' + c); if (d) d.style.display = 'none'; });
+    return;
+  }
+
+  const LABELS = { internal: 'Internal Kongers', customers: 'Kong customers', noncustomers: 'Non-Kong customers' };
+  strip.style.display = '';
+  strip.innerHTML = `<div class="cd-tabstrip">${selected.map(c =>
+    `<button class="cd-tab${c === _activeCohortDetail ? ' active' : ''}${c === 'noncustomers' ? ' paid-tab' : ''}" onclick="showCohortDetail('${c}')">${LABELS[c]}</button>`
+  ).join('')}</div>`;
+
+  COHORTS.forEach(c => {
+    const d = document.getElementById('cdetail-' + c);
+    if (d) d.style.display = (c === _activeCohortDetail) ? 'block' : 'none';
+  });
+}
+
+function showCohortDetail(cohort) {
+  _activeCohortDetail = cohort;
+  refreshCohortDetailTabs();
 }
 
 function restoreCohorts() {
-  ['internal', 'customers', 'noncustomers'].forEach(c => applyCohortSel(c));
+  ['internal', 'customers', 'noncustomers'].forEach(c => {
+    document.getElementById('csel-' + c)?.classList.toggle('selected', !!(S.cohorts?.[c]));
+  });
+  // Set initial active tab to first selected cohort
+  if (!_activeCohortDetail || !S.cohorts?.[_activeCohortDetail]) {
+    _activeCohortDetail = ['internal','customers','noncustomers'].find(c => S.cohorts?.[c]) || null;
+  }
+  refreshCohortDetailTabs();
   updateCohortTotals();
 }
 
@@ -908,15 +953,44 @@ function show(id, visible) { const el = document.getElementById(id); if (el) el.
 // ── SOURCE TAB ────────────────────────────────
 function renderSourceTab() {
   const c = S.cohorts || {};
-  const any = c.internal || c.customers || c.noncustomers;
+  const selected = ['internal','customers','noncustomers'].filter(k => c[k]);
+  const any = selected.length > 0;
   const noC = document.getElementById('source-no-cohorts');
   if (noC) noC.style.display = any ? 'none' : 'block';
-  show('csrc-internal',     c.internal);
-  show('csrc-customers',    c.customers);
-  show('csrc-noncustomers', c.noncustomers);
+
+  // Keep active cohort valid
+  if (!_activeSourceCohort || !c[_activeSourceCohort]) {
+    _activeSourceCohort = selected[0] || null;
+  }
+
+  // Build tab strip
+  const tabsEl = document.getElementById('source-cohort-tabs');
+  if (tabsEl) {
+    if (!any) {
+      tabsEl.style.display = 'none';
+    } else {
+      const LABELS = { internal: 'Internal Kongers', customers: 'Kong customers', noncustomers: 'Non-Kong customers' };
+      tabsEl.style.display = '';
+      tabsEl.innerHTML = `<div class="cd-tabstrip">${selected.map(k =>
+        `<button class="cd-tab${k === _activeSourceCohort ? ' active' : ''}${k === 'noncustomers' ? ' paid-tab' : ''}" onclick="switchSourceCohort('${k}')">${LABELS[k]}</button>`
+      ).join('')}</div>`;
+    }
+  }
+
+  // Show only active cohort section
+  ['internal','customers','noncustomers'].forEach(k => {
+    const el = document.getElementById('csrc-' + k);
+    if (el) el.style.display = (c[k] && k === _activeSourceCohort) ? 'flex' : 'none';
+  });
+
   buildRovoPrompt();
   buildHexGuidance();
   renderAddedPreviews();
+}
+
+function switchSourceCohort(cohort) {
+  _activeSourceCohort = cohort;
+  renderSourceTab();
 }
 
 function buildRovoPrompt() {

@@ -256,8 +256,11 @@
 
           </div>
 
+          <!-- DETAIL TAB STRIP (shown when ≥1 cohort selected) -->
+          <div id="cohort-detail-tabstrip" style="display:none;margin-bottom:12px"></div>
+
           <!-- DETAIL AREAS -->
-          <div style="display:flex;flex-direction:column;gap:12px">
+          <div>
 
             <!-- INTERNAL DETAIL -->
             <div class="cohort-detail" id="cdetail-internal" style="display:none">
@@ -419,6 +422,9 @@
         <div id="source-no-cohorts" class="panel" style="display:none">
           <p class="hint" style="line-height:1.6">No cohorts selected yet. Go to <button class="link-btn" onclick="goTo('setup')">Setup → Research design</button> to choose who you're talking to first.</p>
         </div>
+
+        <!-- COHORT SWITCHER TABS (built dynamically) -->
+        <div id="source-cohort-tabs" style="display:none;margin-bottom:4px"></div>
 
         <!-- INTERNAL KONGERS -->
         <div class="cohort-card" id="csrc-internal" style="display:none">

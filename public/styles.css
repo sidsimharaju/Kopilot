@@ -772,3 +772,11 @@ hr { border: none; border-top: 1px solid var(--border-lt); margin: 4px 0; }
 /* ── AI BUTTON ── */
 .ai-btn { background: var(--blue) !important; border-color: var(--blue) !important; color: #fff !important; }
 .ai-btn:hover { background: #1d4ed8 !important; border-color: #1d4ed8 !important; }
+
+/* ── COHORT DETAIL TABS (Setup) ── */
+.cd-tabstrip { display: flex; gap: 0; border: 1px solid var(--border); border-radius: var(--rsm); background: var(--white); width: fit-content; overflow: hidden; }
+.cd-tab { padding: 5px 14px; font-size: 12px; font-weight: 500; color: var(--t2); background: transparent; border: none; cursor: pointer; border-right: 1px solid var(--border); white-space: nowrap; transition: background .15s; }
+.cd-tab:last-child { border-right: none; }
+.cd-tab:hover:not(.active) { background: var(--page); }
+.cd-tab.active { background: var(--nav-act); color: var(--text); font-weight: 600; }
+.cd-tab.paid-tab.active { background: #fffbeb; color: #92400e; }
