@@ -918,18 +918,17 @@ Return JSON: {"result":"screener questions as plain text"}`;
 
 // ── Recruit tab switching ─────────────────────
 function switchRecruitTab(tab) {
-  ['source','message','manage'].forEach(t => {
+  ['source','manage'].forEach(t => {
     const el = document.getElementById('rtab-content-' + t);
     if (el) { el.style.display = t === tab ? 'flex' : 'none'; el.style.flexDirection = 'column'; }
     document.getElementById('rtab-' + t)?.classList.toggle('active', t === tab);
   });
-  if (tab === 'source')  renderSourceTab();
-  if (tab === 'message') renderMessageTab();
-  if (tab === 'manage')  renderManageTab();
+  if (tab === 'source') renderSourceTab();
+  if (tab === 'manage') renderManageTab();
 }
 
 function refreshRecruitPage() {
-  const activeTab = ['source','message','manage'].find(t => document.getElementById('rtab-' + t)?.classList.contains('active')) || 'source';
+  const activeTab = ['source','manage'].find(t => document.getElementById('rtab-' + t)?.classList.contains('active')) || 'source';
   switchRecruitTab(activeTab);
   updateRecruitBadge();
 }
@@ -986,6 +985,17 @@ function renderSourceTab() {
   buildRovoPrompt();
   buildHexGuidance();
   renderAddedPreviews();
+  // Render per-person message lists inline (booking links live in the source tab now)
+  restoreBookingLinks();
+  renderParticipantMsgList('internal', S.participants.filter(p => p.cohort === 'internal' || p.type === 'internal'));
+  renderParticipantMsgList('customer', S.participants.filter(p => p.cohort === 'customer' || (p.type !== 'internal' && p.cohort !== 'noncustomer')));
+}
+
+function restoreBookingLinks() {
+  const cl = document.getElementById('f-champions-link');
+  const kl = document.getElementById('f-customer-link');
+  if (cl) cl.value = S.championsLink || '';
+  if (kl) kl.value = S.customerLink  || '';
 }
 
 function switchSourceCohort(cohort) {
@@ -1148,7 +1158,7 @@ function addP(p) {
   if (!p.audience) p.audience = p.type === 'internal' ? 'internal-fresh' : 'csm';
   S.participants.push(p);
   renderAddedPreviews();
-  renderMessageTab();
+  renderInlineMsgLists();
   renderManageTab();
   updateRecruitBadge();
   saveState();
@@ -1157,7 +1167,7 @@ function addP(p) {
 function removeP(id) {
   S.participants = S.participants.filter(p => p.id !== id);
   renderAddedPreviews();
-  renderMessageTab();
+  renderInlineMsgLists();
   renderManageTab();
   updateRecruitBadge();
   updateAnalysisBtn();
@@ -1207,31 +1217,14 @@ function renderSurveyTable() {
   }).join('');
 }
 
-// ── MESSAGE TAB ───────────────────────────────
-function renderMessageTab() {
+// ── Inline message rendering (source tab has messaging now) ──
+function renderInlineMsgLists() {
   const ps = S.participants;
-  const c = S.cohorts || {};
-  const hasInternal   = ps.some(p => p.cohort === 'internal' || p.type === 'internal');
-  const hasCustomers  = ps.some(p => p.cohort === 'customer' || (p.type !== 'internal' && p.cohort !== 'noncustomer'));
-  const hasNonCustomers = ps.some(p => p.cohort === 'noncustomer');
-  const msgEmpty = document.getElementById('msg-empty');
-  if (msgEmpty) msgEmpty.style.display = !ps.length && !c.customers ? 'block' : 'none';
-  // Booking links
-  const cl = document.getElementById('f-champions-link');
-  const kl = document.getElementById('f-customer-link');
-  if (cl) cl.value = S.championsLink || '';
-  if (kl) kl.value = S.customerLink  || '';
-  // Show/hide outreach steps
-  const showEl = (id, v) => { const el = document.getElementById(id); if (el) el.style.display = v ? 'block' : 'none'; };
-  showEl('ostep-internal',    hasInternal);
-  showEl('ostep-champions',   c.customers || c.internal);
-  showEl('ostep-customers',   hasCustomers);
-  showEl('ostep-intercom',    c.customers);
-  showEl('ostep-noncustomer', hasNonCustomers);
-  // Render per-person lists
   renderParticipantMsgList('internal', ps.filter(p => p.cohort === 'internal' || p.type === 'internal'));
   renderParticipantMsgList('customer', ps.filter(p => p.cohort === 'customer' || (p.type !== 'internal' && p.cohort !== 'noncustomer')));
 }
+
+function renderMessageTab() { renderInlineMsgLists(); }
 
 function renderParticipantMsgList(cohort, participants) {
   const el = document.getElementById('msglist-' + cohort); if (!el) return;
@@ -1428,7 +1421,6 @@ function renderManageTab() {
       </td>
     </tr>`;
   }).join('');
-  renderSurveyTable();
   updateMetrics();
 }
 

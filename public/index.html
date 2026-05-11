@@ -407,8 +407,7 @@
       <!-- Sticky tab bar -->
       <div style="padding:16px 24px 0;background:var(--page);border-bottom:1px solid var(--border);flex-shrink:0">
         <div style="display:flex;align-items:center;gap:0;border:1px solid var(--border);border-radius:var(--rsm);background:var(--white);width:fit-content;overflow:hidden;margin-bottom:-1px">
-          <button class="recruit-tab active" id="rtab-source"  onclick="switchRecruitTab('source')">Source</button>
-          <button class="recruit-tab"        id="rtab-message" onclick="switchRecruitTab('message')">Message</button>
+          <button class="recruit-tab active" id="rtab-source"  onclick="switchRecruitTab('source')">Recruit</button>
           <button class="recruit-tab"        id="rtab-manage"  onclick="switchRecruitTab('manage')">Manage <span id="manage-count" style="display:none;font-size:10px;background:var(--border-lt);padding:1px 5px;border-radius:8px;margin-left:4px">0</span></button>
         </div>
       </div>
@@ -456,24 +455,38 @@
                 <button class="btn sm filled" onclick="openAddPanel('internal')">+ Add person</button>
                 <button class="btn sm" onclick="triggerCSVUpload('internal')">+ Upload CSV</button>
               </div>
+              <div id="added-preview-internal" style="display:none;margin-top:10px"></div>
             </div>
           </div>
 
-          <div id="added-preview-internal" style="display:none;margin-top:4px"></div>
+          <div class="source-step" style="border-bottom:none;padding-bottom:0">
+            <div class="source-step-num">3</div>
+            <div class="source-step-body">
+              <div class="source-step-title">Draft messages</div>
+              <p class="hint" style="line-height:1.6;margin-bottom:10px">Each person gets two messages tailored to their audience type. Paste your booking link and it gets embedded automatically.</p>
+              <div style="margin-bottom:12px">
+                <label class="fl">Booking link</label>
+                <input class="inp" id="f-champions-link" placeholder="https://cal.app/…" style="max-width:340px" oninput="scheduleAutoSave()"/>
+                <div class="hint" style="margin-top:3px">Set capacity in GCal. Embeds into each message.</div>
+              </div>
+              <div id="msglist-internal"></div>
+              <button class="btn sm" onclick="genCohortMessages('internal')" style="margin-top:8px">✦ Generate all</button>
+            </div>
+          </div>
         </div>
 
         <!-- KONG CUSTOMERS -->
         <div class="cohort-card" id="csrc-customers" style="display:none">
           <div class="cohort-card-hdr">
             <span class="chip c-external">Kong customers</span>
-            <span class="cohort-when">Reach out in parallel with internals. Enterprise customers take longer so start early. You'll go through their CSM.</span>
+            <span class="cohort-when">Reach out in parallel with internals. Enterprise customers take longer so start early.</span>
           </div>
 
           <div class="source-step">
             <div class="source-step-num">1</div>
             <div class="source-step-body">
               <div class="source-step-title">Find engaged orgs using Hex</div>
-              <p class="hint" style="line-height:1.6;margin-bottom:10px">Hex pulls real product usage data so you can find orgs actively using the area you're researching. Follow the steps below, then export and filter your shortlist.</p>
+              <p class="hint" style="line-height:1.6;margin-bottom:10px">Hex pulls real product usage data so you can find orgs actively using the area you're researching. Follow the steps, export, and filter your shortlist.</p>
               <div class="prompt-card">
                 <div class="prompt-card-text" id="hex-prompt-text">Building guidance from your project…</div>
                 <div style="display:flex;gap:6px;margin-top:10px">
@@ -488,32 +501,83 @@
             <div class="source-step-num">2</div>
             <div class="source-step-body">
               <div class="source-step-title">Add the CSMs you'll reach out to</div>
-              <p class="hint" style="line-height:1.6;margin-bottom:10px">The ACCOUNT_OWNER column in Hex gives you the CSM for each org. Add them here. They're who you'll message first to get an intro to the customer. Never ask the CSM to identify which customer is right; you already have that from Hex.</p>
+              <p class="hint" style="line-height:1.6;margin-bottom:10px">The ACCOUNT_OWNER column in Hex gives you the CSM for each org. Add them here — they're your first contact. Never ask CSMs to pick the right customer; you already have that from Hex.</p>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
                 <button class="btn sm filled" onclick="openAddPanel('customer')">+ Add CSM</button>
                 <button class="btn sm" onclick="triggerCSVUpload('customer')">+ Upload CSV from Hex</button>
               </div>
+              <div id="added-preview-customer" style="display:none;margin-top:10px"></div>
             </div>
           </div>
 
-          <div id="added-preview-customer" style="display:none;margin-top:4px"></div>
+          <div class="source-step">
+            <div class="source-step-num">3</div>
+            <div class="source-step-body">
+              <div class="source-step-title">Draft CSM messages</div>
+              <p class="hint" style="line-height:1.6;margin-bottom:10px">Message 1 is a short connection request. Message 2 is sent after they respond — full context, options: intro you, add you to a call, or let you reach out directly. Booking link gets embedded.</p>
+              <div style="margin-bottom:12px">
+                <label class="fl">Customer booking link <span style="font-weight:400;color:var(--t3)">(set max 2 slots in GCal)</span></label>
+                <input class="inp" id="f-customer-link" placeholder="https://cal.app/…" style="max-width:340px" oninput="scheduleAutoSave()"/>
+              </div>
+              <div id="msglist-customer"></div>
+              <button class="btn sm" onclick="genCohortMessages('customer')" style="margin-top:8px">✦ Generate all CSM messages</button>
+            </div>
+          </div>
+
+          <div class="source-step">
+            <div class="source-step-num">4</div>
+            <div class="source-step-body">
+              <div class="source-step-title">Brief for Kong Champions</div>
+              <p class="hint" style="line-height:1.6;margin-bottom:10px">Champions are engaged customers who volunteer — fastest external cohort, usually respond within a week. Send Shikha a Slack message with the brief and she coordinates the request.</p>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                <button class="btn sm filled" id="champions-gen-btn" onclick="genChampionsBrief()">✦ Generate brief</button>
+                <span id="champions-status" class="hint"></span>
+              </div>
+              <div id="champions-output" style="display:none">
+                <textarea class="msg-ta" id="champions-text" style="min-height:140px"></textarea>
+                <div style="display:flex;gap:6px;margin-top:8px">
+                  <button class="btn sm filled" onclick="copyChampions()">Copy</button>
+                  <button class="btn sm" onclick="document.getElementById('champions-output').style.display='none'">Dismiss</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="source-step" style="border-bottom:none;padding-bottom:0">
+            <div class="source-step-num">5</div>
+            <div class="source-step-body">
+              <div class="source-step-title">Large cohort via Intercom</div>
+              <p class="hint" style="line-height:1.6;margin-bottom:10px">For customers without a CSM, or broader unincentivized outreach. Get the email reviewed by Shikha before sending. Upload to Intercom and send in batches of 50–100.</p>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                <button class="btn sm filled" id="intercom-gen-btn" onclick="genIntercomEmail()">✦ Generate email</button>
+                <span id="intercom-status" class="hint"></span>
+              </div>
+              <div id="intercom-output" style="display:none">
+                <div style="margin-bottom:8px"><label class="fl">Subject</label><input class="inp" id="intercom-subject"/></div>
+                <textarea class="msg-ta" id="intercom-text" style="min-height:180px"></textarea>
+                <div style="display:flex;gap:6px;margin-top:8px">
+                  <button class="btn sm filled" onclick="copyIntercom()">Copy</button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- NON-KONG -->
         <div class="cohort-card" id="csrc-noncustomers" style="display:none">
           <div class="cohort-card-hdr">
             <span class="chip" style="background:#fef3c7;color:#92400e">Non-Kong customers</span>
-            <span class="cohort-when">Sourced through Respondent. Work with Shikha on the screener. Log confirmed participants here to keep everything in one place.</span>
+            <span class="cohort-when">Sourced through Respondent. Work with Shikha on the screener. Log confirmed participants here.</span>
           </div>
-          <div class="source-step">
+          <div class="source-step" style="border-bottom:none;padding-bottom:0">
             <div class="source-step-num">1</div>
             <div class="source-step-body">
               <div class="source-step-title">Coordinate with Shikha on Respondent</div>
-              <p class="hint" style="line-height:1.6;margin-bottom:10px">Respondent handles sourcing, screening, and incentives for this cohort. Shikha manages the screener and link. Once participants are confirmed, log them below.</p>
+              <p class="hint" style="line-height:1.6;margin-bottom:10px">Respondent handles sourcing, screening, and incentives. Shikha manages the screener and link. Once participants are confirmed, log them below.</p>
               <button class="btn sm filled" onclick="openAddPanel('noncustomer')">+ Log confirmed participant</button>
+              <div id="added-preview-noncustomer" style="display:none;margin-top:10px"></div>
             </div>
           </div>
-          <div id="added-preview-noncustomer" style="display:none;margin-top:4px"></div>
         </div>
 
         <!-- Shared add panel -->
@@ -560,130 +624,6 @@
 
       </div><!-- /source tab -->
 
-      <!-- ══ MESSAGE TAB ══ -->
-      <div id="rtab-content-message" style="display:none;flex-direction:column;gap:14px">
-
-        <!-- Booking links -->
-        <div class="panel" id="booking-links-panel">
-          <div class="ptitle">Booking links</div>
-          <p class="hint" style="margin-bottom:14px;line-height:1.6">Paste your GCal booking links here before generating outreach. They'll be included in the relevant messages. Set up a separate link per cohort in GCal so you can cap capacity there.</p>
-          <div class="g2">
-            <div>
-              <label class="fl">Kong Champions booking link</label>
-              <input class="inp" id="f-champions-link" placeholder="https://cal.app/…" oninput="scheduleAutoSave()"/>
-              <div class="hint" style="margin-top:4px">Set your cap in GCal. Champions usually respond within the week.</div>
-            </div>
-            <div>
-              <label class="fl">Customer booking link <span style="font-weight:400;color:var(--t3)">(max 2 slots)</span></label>
-              <input class="inp" id="f-customer-link" placeholder="https://cal.app/…" oninput="scheduleAutoSave()"/>
-              <div class="hint" style="margin-top:4px">Enforce the cap in GCal. Include diverse times for timezones.</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- No participants state -->
-        <div id="msg-empty" class="panel" style="display:none">
-          <p class="hint">No participants added yet. Go to the <button class="link-btn" onclick="switchRecruitTab('source')">Source tab</button> to add people first.</p>
-        </div>
-
-        <!-- STEP 1: Internal Kongers -->
-        <div class="outreach-step-card" id="ostep-internal" style="display:none">
-          <div class="ostep-hdr">
-            <div class="ostep-num">1</div>
-            <div>
-              <div class="ostep-title">Internal Kongers</div>
-              <div class="ostep-desc">Reach out first. Use these sessions to practice your script, check your pacing, and catch obvious issues before you're in front of customers.</div>
-            </div>
-            <button class="btn sm" onclick="genCohortMessages('internal')" style="margin-left:auto;flex-shrink:0">✦ Generate all</button>
-          </div>
-          <div id="msglist-internal" style="margin-top:12px"></div>
-        </div>
-
-        <!-- STEP 2: Kong Champions -->
-        <div class="outreach-step-card" id="ostep-champions" style="display:none">
-          <div class="ostep-hdr">
-            <div class="ostep-num">2</div>
-            <div>
-              <div class="ostep-title">Kong Champions</div>
-              <div class="ostep-desc">Start this in parallel with internals. Champions are a small pool of engaged customers who volunteer. Fastest external cohort, usually respond within a week. The brief goes to Shikha and she coordinates the request.</div>
-            </div>
-          </div>
-          <div style="margin-top:12px;padding:14px;background:var(--page);border-radius:var(--rsm)">
-            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
-              <div>
-                <div style="font-size:13px;font-weight:500;margin-bottom:4px">Brief for Shikha</div>
-                <div class="hint" style="line-height:1.6">A short Slack message to Shikha covering study topic, what participants will do, time commitment, and criteria. No incentive (Champions volunteer). Include the Champions booking link.</div>
-              </div>
-              <div style="display:flex;gap:6px;flex-shrink:0">
-                <button class="btn sm filled" id="champions-gen-btn" onclick="genChampionsBrief()">✦ Generate brief</button>
-              </div>
-            </div>
-            <div id="champions-output" style="display:none;margin-top:12px">
-              <textarea class="msg-ta" id="champions-text" style="min-height:160px"></textarea>
-              <div style="display:flex;gap:6px;margin-top:8px">
-                <button class="btn sm filled" onclick="copyChampions()">Copy</button>
-                <button class="btn sm" onclick="document.getElementById('champions-output').style.display='none'">Dismiss</button>
-              </div>
-            </div>
-            <div id="champions-status" class="hint" style="margin-top:6px"></div>
-          </div>
-        </div>
-
-        <!-- STEP 3: Enterprise customers via CSM -->
-        <div class="outreach-step-card" id="ostep-customers" style="display:none">
-          <div class="ostep-hdr">
-            <div class="ostep-num">3</div>
-            <div>
-              <div class="ostep-title">Enterprise customers via CSM</div>
-              <div class="ostep-desc">You've identified orgs in Hex. Now reach the CSM for each one on Slack. Give them options: intro you to the customer, add you to an upcoming call, or let you reach out directly. Offer to share findings back.</div>
-            </div>
-            <button class="btn sm" onclick="genCohortMessages('customer')" style="margin-left:auto;flex-shrink:0">✦ Generate all CSM messages</button>
-          </div>
-          <div id="msglist-customer" style="margin-top:12px"></div>
-        </div>
-
-        <!-- STEP 4: Large cohort / survey via Intercom -->
-        <div class="outreach-step-card" id="ostep-intercom" style="display:none">
-          <div class="ostep-hdr">
-            <div class="ostep-num">4</div>
-            <div>
-              <div class="ostep-title">Large cohort or survey via Intercom</div>
-              <div class="ostep-desc">For unincentivized studies or surveys reaching customers who don't have a CSM assigned. Get the email reviewed by Shikha before sending. Upload your list to Intercom and send in batches of 50–100.</div>
-            </div>
-          </div>
-          <div style="margin-top:12px;padding:14px;background:var(--page);border-radius:var(--rsm)">
-            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
-              <div>
-                <div style="font-size:13px;font-weight:500;margin-bottom:4px">Intercom email</div>
-                <div class="hint" style="line-height:1.6">Generates subject + body. If there's an incentive, a placeholder will be left for Shikha to fill in.</div>
-              </div>
-              <button class="btn sm filled" id="intercom-gen-btn" onclick="genIntercomEmail()" style="flex-shrink:0">✦ Generate email</button>
-            </div>
-            <div id="intercom-output" style="display:none;margin-top:12px">
-              <div style="margin-bottom:8px"><label class="fl">Subject</label><input class="inp" id="intercom-subject"/></div>
-              <textarea class="msg-ta" id="intercom-text" style="min-height:200px"></textarea>
-              <div style="display:flex;gap:6px;margin-top:8px;align-items:center">
-                <button class="btn sm filled" onclick="copyIntercom()">Copy</button>
-                <button class="btn sm" onclick="triggerCSVUpload('survey')">+ Bulk add survey respondents</button>
-              </div>
-            </div>
-            <div id="intercom-status" class="hint" style="margin-top:6px"></div>
-          </div>
-        </div>
-
-        <!-- Non-Kong note -->
-        <div class="outreach-step-card" id="ostep-noncustomer" style="display:none">
-          <div class="ostep-hdr">
-            <div class="ostep-num" style="background:var(--border-lt);color:var(--t3)">–</div>
-            <div>
-              <div class="ostep-title" style="color:var(--t2)">Non-Kong customers</div>
-              <div class="ostep-desc">Messaging for this cohort is handled through Respondent. Log confirmed participants in the Manage tab.</div>
-            </div>
-          </div>
-        </div>
-
-      </div><!-- /message tab -->
-
       <!-- ══ MANAGE TAB ══ -->
       <div id="rtab-content-manage" style="display:none;flex-direction:column;gap:14px">
 
@@ -711,25 +651,6 @@
             <tbody id="manage-body"></tbody>
           </table>
           <input type="file" id="transcript-upload" accept=".vtt,.txt,.srt,.md,.doc,.docx" style="display:none" onchange="handleTranscriptUpload(event)"/>
-        </div>
-
-        <!-- Survey respondents -->
-        <div class="panel" id="survey-panel">
-          <div class="ptitle">
-            Survey respondents
-            <div class="r">
-              <button class="btn sm" onclick="triggerCSVUpload('survey')">+ Bulk upload</button>
-              <button class="btn sm" onclick="openAddPanel('survey')">+ Add one</button>
-            </div>
-          </div>
-          <p class="hint" style="margin-bottom:12px;line-height:1.6">Track who received the Intercom email and whether they responded. Bulk upload from your Intercom export.</p>
-          <div id="survey-empty" class="hint" style="padding:6px 0">No survey respondents yet.</div>
-          <table class="tbl" id="survey-tbl" style="display:none">
-            <thead>
-              <tr><th>Name / Email</th><th>Company</th><th>Status</th><th></th></tr>
-            </thead>
-            <tbody id="survey-body"></tbody>
-          </table>
         </div>
 
       </div><!-- /manage tab -->
