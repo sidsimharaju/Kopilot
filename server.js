@@ -45,7 +45,9 @@ class FirestoreStore extends Store {
   }
   set(sid, sess, cb) {
     const maxAge = sess.cookie?.maxAge ?? 7 * 24 * 60 * 60 * 1000;
-    this._col.doc(sid).set({ sess, expires: Date.now() + maxAge })
+    // Strip custom Session prototype — Firestore only accepts plain objects
+    const plainSess = JSON.parse(JSON.stringify(sess));
+    this._col.doc(sid).set({ sess: plainSess, expires: Date.now() + maxAge })
       .then(() => cb(null))
       .catch(cb);
   }
