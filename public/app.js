@@ -1,24 +1,61 @@
 /* ════════════════════════════════════════════════
    Research Cockpit — app.js
-   All API calls go through /api/* on the local server
-   so secrets never touch the browser.
 ════════════════════════════════════════════════ */
 
 // ── State ─────────────────────────────────────
 const S = {
   projectName: '', date: '', area: '', designer: [], researcher: [],
   purpose: '', context: '',
+  methodology: 'usability',
+  cohorts: { internal: false, customers: false, noncustomers: false },
+  sessions: {
+    internal:     { min: '', ideal: '', max: '' },
+    customers:    { min: '', ideal: '', max: '' },
+    noncustomers: { min: '', ideal: '', max: '' },
+  },
+  criteria: { customers: '', noncustomers: '' },
+  screener: { customers: '', noncustomers: '' },
+  screenerChoice: { customers: '', noncustomers: '' },
+  chipSelections: { customers: [], noncustomers: [] },
+  championsLink: '',
+  customerLink: '',
   objectives: [],
   participants: [],
-  outreachEmail: null,
-  outreachSlack: null,
+  surveyParticipants: [],
   analysisResult: null,
   synthesisResult: null,
 };
-let pid = 1, oid = 1;
+let pid = 1, oid = 1, spid = 1;
 
 const DESIGNERS  = ['Ally','Andras','Erick','Helen','Janmesh','Jason','Jenya','Jessica','Julie','Julieta','Katrina','Missy','Mo','Salomon','Santhosh','Shikha','Sid','Travis'];
 const RESEARCHERS = ['Shikha'];
+
+const AUDIENCE_LABELS = {
+  'internal-fresh':    'Fresh eyes',
+  'internal-adjacent': 'Adjacent product',
+  'internal-rolematch':'Role match',
+  'se':                'Solutions engineer',
+  'field-engineer':    'Field / platform engineer',
+  'csm':               'CSM',
+  'customer':          'Customer (direct)',
+  'noncustomer':       'Non-Kong (Respondent)',
+};
+
+const SURVEY_STATUS = {
+  'added':       { bg: '#f4f4f5', color: '#3f3f46',  label: 'Added' },
+  'contacted':   { bg: '#dbeafe', color: '#1d4ed8',  label: 'Contacted' },
+  'responded':   { bg: '#dcfce7', color: '#15803d',  label: 'Responded' },
+  'no-response': { bg: '#fee2e2', color: '#dc2626',  label: 'No response' },
+};
+
+const STATUS_PILL = {
+  'identified': { bg: '#f4f4f5', color: '#3f3f46',  label: 'Identified' },
+  'contacted':  { bg: '#dbeafe', color: '#1d4ed8',  label: 'Contacted' },
+  'scheduled':  { bg: '#fef3c7', color: '#92400e',  label: 'Scheduled' },
+  'completed':  { bg: '#dcfce7', color: '#15803d',  label: 'Completed' },
+  'dropped':    { bg: '#f4f4f5', color: '#9ca3af',  label: 'Dropped' },
+  'no-show':    { bg: '#fee2e2', color: '#dc2626',  label: 'No-Show' },
+};
 
 function addPerson(field, select) {
   const name = select.value;
@@ -41,84 +78,331 @@ function renderPersonPills(field) {
   ).join('');
 }
 
-// ── Persistence ───────────────────────────────
-const STORAGE_KEY = 'rc_state_v1';
+// ── Firestore-backed persistence ───────────────
+let currentProjectId = null;
+let _projectCreatedAt = null;
 
 function saveState() {
   readObjectives();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ S, pid, oid }));
+  if (!currentProjectId) return;
+  const now = new Date().toISOString();
+  if (!_projectCreatedAt) _projectCreatedAt = now;
+
+  // Capture live field values
+  S.methodology    = S.methodology || 'usability';
+  S.championsLink  = document.getElementById('f-champions-link')?.value || S.championsLink || '';
+  S.customerLink   = document.getElementById('f-customer-link')?.value  || S.customerLink  || '';
+  ['internal','customers','noncustomers'].forEach(c => {
+    if (!S.sessions[c]) S.sessions[c] = {};
+    S.sessions[c].min   = document.getElementById('f-sessions-' + c + '-min')?.value   || S.sessions[c].min   || '';
+    S.sessions[c].ideal = document.getElementById('f-sessions-' + c + '-ideal')?.value || S.sessions[c].ideal || '';
+    S.sessions[c].max   = document.getElementById('f-sessions-' + c + '-max')?.value   || S.sessions[c].max   || '';
+  });
+  if (!S.criteria) S.criteria = {};
+  if (!S.screener) S.screener = {};
+  S.criteria.customers    = document.getElementById('f-criteria-customers')?.value    || S.criteria.customers    || '';
+  S.criteria.noncustomers = document.getElementById('f-criteria-noncustomers')?.value || S.criteria.noncustomers || '';
+  S.screener.customers    = document.getElementById('f-screener-customers')?.value    || S.screener.customers    || '';
+  S.screener.noncustomers = document.getElementById('f-screener-noncustomers')?.value || S.screener.noncustomers || '';
+
+  apiFetch(`/api/projects/${currentProjectId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: currentProjectId,
+      createdAt: _projectCreatedAt,
+      updatedAt: now,
+      S: { ...S },
+      pid, oid, spid,
+    }),
+  }).catch(e => console.warn('Save failed:', e));
 }
 
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return false;
-    const saved = JSON.parse(raw);
-    Object.assign(S, saved.S);
-    // Migrate old string values to arrays
-    if (typeof S.designer === 'string')  S.designer  = S.designer  ? [S.designer]  : [];
-    if (typeof S.researcher === 'string') S.researcher = S.researcher ? [S.researcher] : [];
-    pid = saved.pid || 1;
-    oid = saved.oid || 1;
-    return true;
-  } catch { return false; }
+async function saveStateAsync() {
+  readObjectives();
+  if (!currentProjectId) return;
+  const now = new Date().toISOString();
+  if (!_projectCreatedAt) _projectCreatedAt = now;
+  await apiFetch(`/api/projects/${currentProjectId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: currentProjectId,
+      createdAt: _projectCreatedAt,
+      updatedAt: now,
+      S: { ...S },
+      pid, oid, spid,
+    }),
+  });
 }
 
-function restoreUI() {
-  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
-  set('f-name', S.projectName);
-  set('f-date', S.date);
-  set('f-area', S.area);
-  set('f-purpose', S.purpose);
-  set('f-context', S.context);
-  document.getElementById('tb-title').textContent = S.projectName || 'New project';
-  renderPersonPills('designer');
-  renderPersonPills('researcher');
+// ── Tab switching (directory) ──────────────────
+let _activeTab = 'projects';
 
-  // Restore objective rows
-  document.getElementById('obj-rows').innerHTML = '';
-  const savedOid = oid;
-  oid = 1;
-  if (S.objectives.length) S.objectives.forEach(o => addObjRow(o));
-  else addObjRow({ priority: 'Must' });
-  oid = savedOid;
-
-  // Participants already in S — just render
-  refreshPTable();
-  updateBadges();
-
-  // Nav done states
-  if (S.projectName || S.purpose || S.objectives.some(o => o.objective))
-    document.getElementById('nav-setup').classList.add('done');
-  if (S.participants.length)
-    document.getElementById('nav-participants').classList.add('done');
-  if (S.participants.length && S.participants.every(p => p.status === 'completed' || p.status === 'declined'))
-    document.getElementById('nav-outreach').classList.add('done');
-
-  // Restore outreach button states
-  updateEmailBtn();
-  updateSlackBtn();
-  updateAnalysisBtn();
-
-  // Restore analysis
-  if (S.analysisResult?.participants?.length || S.synthesisResult) {
-    renderAnalysis({ participants: S.analysisResult?.participants || [], synthesis: S.synthesisResult });
-    document.getElementById('nav-analysis').classList.add('done');
+function switchTab(tab) {
+  _activeTab = tab;
+  document.querySelectorAll('.dir-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tab);
+  });
+  const newBtn = document.getElementById('dir-new-btn');
+  if (tab === 'projects') {
+    document.getElementById('dir-grid').style.display = 'grid';
+    document.getElementById('dir-customers').style.display = 'none';
+    document.getElementById('dir-empty').style.display = 'none';
+    if (newBtn) newBtn.style.display = '';
+    renderDirectory();
+  } else {
+    document.getElementById('dir-grid').style.display = 'none';
+    document.getElementById('dir-customers').style.display = 'block';
+    if (newBtn) newBtn.style.display = 'none';
+    renderCustomers();
   }
 }
 
-function newProject() {
-  if (!confirm('Start a new project? All current data will be cleared.')) return;
-  localStorage.removeItem(STORAGE_KEY);
+async function renderCustomers() {
+  const container = document.getElementById('dir-customers');
+  container.innerHTML = '<div style="color:var(--t3);font-size:13px;padding:4px 0">Loading…</div>';
+
+  let projects;
+  try {
+    projects = await apiFetch('/api/projects').then(r => r.json());
+  } catch (e) {
+    container.innerHTML = `<div class="hint">Could not load data — ${e.message}</div>`;
+    return;
+  }
+
+  const map = new Map();
+  for (const proj of projects) {
+    const participants = (proj.S?.participants || []);
+    for (const p of participants) {
+      const key = (p.contact || '').toLowerCase().trim() || (p.name || '').toLowerCase().trim();
+      if (!key) continue;
+      if (!map.has(key)) {
+        map.set(key, { name: p.name || '', role: p.role || '', company: p.company || '', contact: p.contact || '', projects: [], interviews: 0 });
+      }
+      const entry = map.get(key);
+      entry.interviews += p.status === 'completed' ? 1 : 0;
+      const projName = proj.S?.projectName || 'Untitled';
+      if (!entry.projects.find(pr => pr.id === proj.id)) {
+        entry.projects.push({ id: proj.id, name: projName });
+      }
+    }
+  }
+
+  const rows = [...map.values()].sort((a, b) => b.interviews - a.interviews || a.name.localeCompare(b.name));
+
+  if (!rows.length) {
+    container.innerHTML = `
+      <div class="dir-empty" style="display:flex">
+        <div class="dei">👥</div>
+        <div class="del">No customers yet</div>
+        <div class="ded">Add participants to your research projects and they'll appear here.</div>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="cust-wrap">
+      <table class="cust-tbl">
+        <thead><tr>
+          <th>Name</th><th>Role / Company</th><th>Contact</th><th>Research</th><th style="text-align:right">Interviews</th>
+        </tr></thead>
+        <tbody>
+          ${rows.map(r => `<tr>
+            <td><div class="cp">${esc(r.name)}</div></td>
+            <td><div class="cs">${esc(r.role)}${r.company ? ' · ' + esc(r.company) : ''}</div></td>
+            <td><div class="cs">${esc(r.contact)}</div></td>
+            <td><div class="cust-pills">${r.projects.map(pr => `<span class="cust-proj-pill">${esc(pr.name)}</span>`).join('')}</div></td>
+            <td style="text-align:right"><span class="cust-iv-badge ${r.interviews > 0 ? 'has-iv' : ''}">${r.interviews}</span></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+// ── Directory view ─────────────────────────────
+async function showDirectory() {
+  document.getElementById('dir-view').style.display = 'flex';
+  document.getElementById('cockpit-view').style.display = 'none';
+  document.body.style.overflow = 'auto';
+  if (_activeTab === 'customers') {
+    await renderCustomers();
+  } else {
+    await renderDirectory();
+  }
+}
+
+function showCockpit() {
+  document.getElementById('dir-view').style.display = 'none';
+  document.getElementById('cockpit-view').style.display = 'grid';
+  document.body.style.overflow = 'hidden';
+}
+
+async function backToDirectory() {
+  saveState();
+  await showDirectory();
+}
+
+async function renderDirectory() {
+  const grid = document.getElementById('dir-grid');
+  const empty = document.getElementById('dir-empty');
+  empty.style.display = 'none';
+  grid.innerHTML = '<div style="color:var(--t3);font-size:13px;padding:4px 0">Loading…</div>';
+
+  try {
+    const projects = await apiFetch('/api/projects').then(r => r.json());
+    if (!projects.length) {
+      empty.style.display = 'flex';
+      grid.innerHTML = '';
+      return;
+    }
+    grid.innerHTML = projects.map(p => {
+      const state = p.S || {};
+      const name = state.projectName || 'Untitled project';
+      const purpose = (state.purpose || '').trim();
+      const designers = (state.designer || []);
+      const researchers = (state.researcher || []);
+      const status = deriveStatus(state);
+      const pills = [
+        ...designers.map(n => `<span class="pj-pill pj-pill-d">${esc(n)}</span>`),
+        ...researchers.map(n => `<span class="pj-pill pj-pill-r">${esc(n)}</span>`),
+      ].join('');
+      const methodLabel = state.methodology === 'usability' ? 'Usability test'
+        : state.methodology === 'discovery' ? 'Discovery interview' : '';
+      return `
+        <div class="pj-card" onclick="openProject('${p.id}')">
+          <div class="pj-card-top">
+            <div class="pj-name">${esc(name)}</div>
+            <div class="pj-menu" onclick="event.stopPropagation()">
+              <button class="pj-menu-btn" onclick="toggleCardMenu('${p.id}')">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="8" cy="13" r="1.2"/></svg>
+              </button>
+              <div class="pj-menu-drop" id="pjm-${p.id}">
+                <button class="pj-menu-item" onclick="deleteProject('${p.id}')">Delete project</button>
+              </div>
+            </div>
+          </div>
+          ${purpose ? `<div class="pj-desc">${esc(purpose)}</div>` : ''}
+          ${methodLabel ? `<div style="margin-top:2px"><span class="pj-method-tag">${esc(methodLabel)}</span></div>` : ''}
+          ${pills ? `<div class="pj-pills">${pills}</div>` : ''}
+          <div class="pj-footer">
+            <span class="pj-st s-${status.cls}">${status.label}</span>
+            <span class="pj-date">Updated ${fmtRelative(new Date(p.updatedAt))}</span>
+          </div>
+        </div>`;
+    }).join('');
+  } catch (e) {
+    grid.innerHTML = `<div class="hint" style="padding:4px 0">Could not load projects — ${e.message}</div>`;
+  }
+}
+
+function deriveStatus(state) {
+  if (state.analysisResult?.participants?.length) return { label: 'Analysis', cls: 'analysis' };
+  if ((state.participants || []).some(p => p.status === 'completed')) return { label: 'Interviews', cls: 'done' };
+  if ((state.participants || []).length > 0) return { label: 'Recruiting', cls: 'progress' };
+  if (state.projectName || (state.objectives || []).some(o => o.objective)) return { label: 'Planning', cls: 'planning' };
+  return { label: 'Draft', cls: 'draft' };
+}
+
+function fmtRelative(date) {
+  const diff = Date.now() - date.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+}
+
+async function openProject(id) {
+  currentProjectId = id;
+  _projectCreatedAt = null;
+  try {
+    const project = await apiFetch(`/api/projects/${id}`).then(r => r.json());
+    _projectCreatedAt = project.createdAt;
+    Object.assign(S, project.S || {});
+    if (typeof S.designer  === 'string') S.designer  = S.designer  ? [S.designer]  : [];
+    if (typeof S.researcher === 'string') S.researcher = S.researcher ? [S.researcher] : [];
+    if (!S.cohorts)       S.cohorts = { internal: false, customers: false, noncustomers: false };
+    if (!S.sessions)      S.sessions = { internal:{min:'',ideal:'',max:''}, customers:{min:'',ideal:'',max:''}, noncustomers:{min:'',ideal:'',max:''} };
+    if (!S.criteria)      S.criteria = { customers: '', noncustomers: '' };
+    if (!S.screener)      S.screener = { customers: '', noncustomers: '' };
+    if (!S.screenerChoice) S.screenerChoice = { customers: '', noncustomers: '' };
+    if (!S.chipSelections) S.chipSelections = { customers: [], noncustomers: [] };
+    if (!S.methodology)   S.methodology = 'usability';
+    if (!S.championsLink) S.championsLink = '';
+    if (!S.customerLink)  S.customerLink  = '';
+    if (!S.surveyParticipants) S.surveyParticipants = [];
+    // Migrate old participant statuses
+    S.participants = (S.participants || []).map(p => {
+      const migrated = { ...p };
+      if (p.status === 'pending')       migrated.status = 'identified';
+      if (p.status === 'outreach-sent') migrated.status = 'contacted';
+      if (p.status === 'declined')      migrated.status = 'dropped';
+      if (!migrated.sessionLink) migrated.sessionLink = migrated.zoomLink || '';
+      if (!migrated.cohort)   migrated.cohort   = migrated.type === 'internal' ? 'internal' : 'customer';
+      if (!migrated.audience) migrated.audience = migrated.type === 'internal' ? 'internal-fresh' : 'csm';
+      if (!migrated.msg1)     migrated.msg1 = '';
+      if (!migrated.msg2)     migrated.msg2 = '';
+      return migrated;
+    });
+    pid  = project.pid  || 1;
+    oid  = project.oid  || 1;
+    spid = project.spid || 1;
+  } catch (e) {
+    toast('Failed to load project');
+    return;
+  }
+  restoreUI();
+  goTo('setup');
+  showCockpit();
+}
+
+async function deleteProject(id) {
+  if (!confirm('Delete this project? This cannot be undone.')) return;
+  try {
+    await apiFetch(`/api/projects/${id}`, { method: 'DELETE' });
+    toast('Project deleted');
+    await renderDirectory();
+  } catch (e) {
+    toast('Delete failed: ' + e.message);
+  }
+}
+
+function toggleCardMenu(id) {
+  const target = document.getElementById('pjm-' + id);
+  const isOpen = target.classList.contains('open');
+  document.querySelectorAll('.pj-menu-drop').forEach(m => m.classList.remove('open'));
+  if (!isOpen) target.classList.add('open');
+}
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('.pj-menu-drop').forEach(m => m.classList.remove('open'));
+});
+
+// ── New / reset project ────────────────────────
+async function newProject() {
+  currentProjectId = 'proj_' + Date.now();
+  _projectCreatedAt = new Date().toISOString();
+
   Object.assign(S, {
     projectName: '', date: '', area: '', designer: [], researcher: [],
     purpose: '', context: '',
-    objectives: [], participants: [],
-    outreachEmail: null,
-    outreachSlack: null,
+    methodology: 'usability',
+    cohorts: { internal: false, customers: false, noncustomers: false },
+    sessions: { internal:{min:'',ideal:'',max:''}, customers:{min:'',ideal:'',max:''}, noncustomers:{min:'',ideal:'',max:''} },
+    criteria: { customers: '', noncustomers: '' },
+    screener: { customers: '', noncustomers: '' },
+    screenerChoice: { customers: '', noncustomers: '' },
+    chipSelections: { customers: [], noncustomers: [] },
+    championsLink: '', customerLink: '',
+    objectives: [], participants: [], surveyParticipants: [],
     analysisResult: null, synthesisResult: null,
   });
-  pid = 1; oid = 1;
+  pid = 1; oid = 1; spid = 1;
+
   ['f-name','f-date','f-area','f-purpose','f-context']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   renderPersonPills('designer');
@@ -128,11 +412,18 @@ function newProject() {
   document.getElementById('a-content').style.display = 'none';
   document.getElementById('a-empty').style.display = 'block';
   document.querySelectorAll('.nav').forEach(el => el.classList.remove('done'));
+  setMethod('usability');
+  ['internal','customers','noncustomers'].forEach(c => {
+    document.getElementById('csel-' + c)?.classList.remove('selected');
+    const d = document.getElementById('cdetail-' + c);
+    if (d) d.style.display = 'none';
+  });
   addObjRow({ priority: 'Must' });
-  refreshPTable();
-  updateBadges();
+  updateRecruitBadge();
+
+  await saveStateAsync();
+  showCockpit();
   goTo('setup');
-  toast('New project started');
 }
 
 // ── Utils ─────────────────────────────────────
@@ -159,13 +450,80 @@ function liveTitle() {
   document.getElementById('tb-title').textContent = n;
 }
 
+// ── Restore UI from S ─────────────────────────
+function restoreUI() {
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+  set('f-name',    S.projectName);
+  set('f-date',    S.date);
+  set('f-area',    S.area);
+  set('f-purpose', S.purpose);
+  set('f-context', S.context);
+  set('f-champions-link', S.championsLink);
+  set('f-customer-link',  S.customerLink);
+  set('f-criteria-customers',    S.criteria?.customers    || '');
+  set('f-criteria-noncustomers', S.criteria?.noncustomers || '');
+  set('f-screener-customers',    S.screener?.customers    || '');
+  set('f-screener-noncustomers', S.screener?.noncustomers || '');
+  // session fields
+  ['internal','customers','noncustomers'].forEach(c => {
+    set('f-sessions-' + c + '-min',   S.sessions?.[c]?.min   || '');
+    set('f-sessions-' + c + '-ideal', S.sessions?.[c]?.ideal || '');
+    set('f-sessions-' + c + '-max',   S.sessions?.[c]?.max   || '');
+  });
+  document.getElementById('tb-title').textContent = S.projectName || 'New project';
+  renderPersonPills('designer');
+  renderPersonPills('researcher');
+
+  document.getElementById('obj-rows').innerHTML = '';
+  const savedOid = oid;
+  oid = 1;
+  if (S.objectives.length) S.objectives.forEach(o => addObjRow(o));
+  else addObjRow({ priority: 'Must' });
+  oid = savedOid;
+
+  // restore methodology
+  setMethod(S.methodology || 'usability');
+  // restore cohorts
+  restoreCohorts();
+  // restore screener choices
+  ['customers','noncustomers'].forEach(cohort => {
+    const choice = S.screenerChoice?.[cohort];
+    if (choice) setScreenerChoice(cohort, choice);
+    // restore chip selections
+    const saved = S.chipSelections?.[cohort] || [];
+    if (saved.length) {
+      document.querySelectorAll(`#chips-${cohort} .crit-chip`).forEach(chip => {
+        if (saved.includes(chip.dataset.val)) chip.classList.add('selected');
+      });
+    }
+  });
+
+  updateRecruitBadge();
+
+  document.querySelectorAll('.nav').forEach(el => el.classList.remove('done'));
+  if (S.projectName || S.purpose || S.objectives.some(o => o.objective))
+    document.getElementById('nav-setup').classList.add('done');
+  if (S.participants.length)
+    document.getElementById('nav-recruit').classList.add('done');
+
+  updateAnalysisBtn();
+
+  if (S.analysisResult?.participants?.length || S.synthesisResult) {
+    renderAnalysis({ participants: S.analysisResult?.participants || [], synthesis: S.synthesisResult });
+    document.getElementById('nav-analysis').classList.add('done');
+  } else {
+    document.getElementById('a-content').style.display = 'none';
+    document.getElementById('a-empty').style.display = 'block';
+  }
+}
+
 // ── Navigation ────────────────────────────────
 function goTo(p) {
   document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.nav').forEach(el => el.classList.remove('active'));
   document.getElementById('page-' + p).classList.add('active');
   document.getElementById('nav-' + p).classList.add('active');
-  if (p === 'outreach') refreshOutreach();
+  if (p === 'recruit') refreshRecruitPage();
 }
 
 // ── Drawer ────────────────────────────────────
@@ -181,19 +539,28 @@ function closeDrawer() {
   document.getElementById('prev-btn').classList.remove('on');
 }
 
+// ── Safe API fetch — redirects to login if session expired ──
+async function apiFetch(url, opts = {}) {
+  const res = await fetch(url, opts);
+  const ct = res.headers.get('content-type') || '';
+  if (!res.ok || ct.includes('text/html')) {
+    // Auth redirect: server returned HTML instead of JSON
+    window.location.href = '/auth/google';
+    throw new Error('Session expired — redirecting to login');
+  }
+  return res;
+}
+
 // ── Agent (Claude with tools, via server) ─────
 const AGENT_SYSTEM = `You are a research operations assistant.
 
 Always respond with valid JSON only — no markdown fences, no preamble.
 
 Response schemas:
-- Outreach (internal-slack): {"message":""}
-- Outreach (external-email): {"subject":"","body":""}
 - Analysis: {"participants":[{"name":"","role":"","byObjective":[{"objective":"","finding":"2-3 sentence narrative specific to this objective: what this person does/experiences, the tension or insight, and why it matters — enough to stand alone without reading the transcript","confidence":"high|medium|low","quotes":[""]}]}],"synthesis":{"tldr":"","themes":[{"name":"","description":"","participants":""}],"topPainPoints":[""],"recommendations":[""],"openQuestions":[""]}}`;
 
-// ── Agent caller ─────────────────────────────
 async function callAgent(userMsg, options = {}) {
-  const res = await fetch('/api/agent', {
+  const res = await apiFetch('/api/agent', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -209,7 +576,23 @@ async function callAgent(userMsg, options = {}) {
   catch { throw new Error('JSON parse error: ' + text.slice(0, 200)); }
 }
 
-// ── AI fill ───────────────────────────────────
+// Variant that returns plain text (for champions brief etc.)
+async function callAgentText(prompt, options = {}) {
+  const res = await apiFetch('/api/agent', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      system: 'You are a research operations assistant. Write like a colleague on Slack: warm, direct, short sentences, no em dashes, no corporate language. Return plain text only.',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: options.max_tokens || 600,
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message || 'Agent error');
+  return data.content?.find(b => b.type === 'text')?.text || '';
+}
+
+// ── AI fill (setup page) ───────────────────────
 async function fillWithAI() {
   const input = document.getElementById('ai-input').value.trim();
   if (!input) { toast('Describe your research first'); return; }
@@ -321,7 +704,7 @@ function readObjectives() {
   });
 }
 
-// ── Auto-save for Setup fields ────────────────
+// ── Auto-save ─────────────────────────────────
 let _autoSaveTimer = null;
 function scheduleAutoSave() {
   clearTimeout(_autoSaveTimer);
@@ -331,6 +714,20 @@ function scheduleAutoSave() {
     S.area        = document.getElementById('f-area')?.value || '';
     S.purpose     = document.getElementById('f-purpose')?.value || '';
     S.context     = document.getElementById('f-context')?.value || '';
+    S.championsLink = document.getElementById('f-champions-link')?.value || '';
+    S.customerLink  = document.getElementById('f-customer-link')?.value  || '';
+    ['internal','customers','noncustomers'].forEach(c => {
+      if (!S.sessions[c]) S.sessions[c] = {};
+      S.sessions[c].min   = document.getElementById('f-sessions-' + c + '-min')?.value   || '';
+      S.sessions[c].ideal = document.getElementById('f-sessions-' + c + '-ideal')?.value || '';
+      S.sessions[c].max   = document.getElementById('f-sessions-' + c + '-max')?.value   || '';
+    });
+    if (!S.criteria) S.criteria = {};
+    if (!S.screener) S.screener = {};
+    S.criteria.customers    = document.getElementById('f-criteria-customers')?.value    || '';
+    S.criteria.noncustomers = document.getElementById('f-criteria-noncustomers')?.value || '';
+    S.screener.customers    = document.getElementById('f-screener-customers')?.value    || '';
+    S.screener.noncustomers = document.getElementById('f-screener-noncustomers')?.value || '';
     readObjectives();
     liveTitle();
     if (S.projectName || S.purpose || S.objectives.some(o => o.objective))
@@ -339,23 +736,265 @@ function scheduleAutoSave() {
   }, 500);
 }
 
-// ── CSV upload ────────────────────────────────
-function triggerCSVUpload() {
-  document.getElementById('csv-input').click();
+// ── Research design — method ───────────────────
+function setMethod(m) {
+  S.methodology = m;
+  ['usability', 'discovery'].forEach(k => {
+    document.getElementById('mb-' + k)?.classList.toggle('active', k === m);
+  });
+  saveState();
 }
 
-function handleCSVUpload(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  e.target.value = '';
-  const reader = new FileReader();
-  reader.onload = ev => processCSVText(ev.target.result);
-  reader.readAsText(file);
+// ── Cohorts ───────────────────────────────────
+function toggleCohortSel(cohort) {
+  if (!S.cohorts) S.cohorts = {};
+  S.cohorts[cohort] = !S.cohorts[cohort];
+  applyCohortSel(cohort);
+  updateCohortTotals();
+  scheduleAutoSave();
+  syncRecruitCohorts();
 }
+
+function applyCohortSel(cohort) {
+  const selected = S.cohorts?.[cohort] || false;
+  document.getElementById('csel-' + cohort)?.classList.toggle('selected', selected);
+  const detail = document.getElementById('cdetail-' + cohort);
+  if (detail) detail.style.display = selected ? 'block' : 'none';
+}
+
+function restoreCohorts() {
+  ['internal', 'customers', 'noncustomers'].forEach(c => applyCohortSel(c));
+  updateCohortTotals();
+}
+
+function updateCohortTotals() {
+  let totalIdeal = 0;
+  ['internal','customers','noncustomers'].forEach(c => {
+    if (!S.cohorts?.[c]) return;
+    const v = parseInt(document.getElementById('f-sessions-' + c + '-ideal')?.value) || 0;
+    totalIdeal += v;
+  });
+  const el = document.getElementById('cohort-total-summary');
+  if (el) {
+    const selected = ['internal','customers','noncustomers'].filter(c => S.cohorts?.[c]);
+    if (!selected.length) { el.textContent = ''; return; }
+    el.textContent = totalIdeal ? `${totalIdeal} sessions planned` : `${selected.length} cohort${selected.length > 1 ? 's' : ''} selected`;
+  }
+}
+
+function toggleCritChip(el, cohort) {
+  el.classList.toggle('selected');
+  const selected = [...document.querySelectorAll('#chips-' + cohort + ' .crit-chip.selected')]
+    .map(c => c.dataset.val);
+  if (!S.chipSelections) S.chipSelections = {};
+  S.chipSelections[cohort] = selected;
+  saveState();
+}
+
+function setScreenerChoice(cohort, choice) {
+  if (!S.screenerChoice) S.screenerChoice = {};
+  S.screenerChoice[cohort] = choice;
+  ['yes','no'].forEach(v => {
+    document.getElementById('syn-' + v + '-' + cohort)?.classList.toggle('active', v === choice);
+  });
+  const panel = document.getElementById('screener-' + cohort + '-panel');
+  if (panel) panel.style.display = choice === 'yes' ? 'block' : 'none';
+  saveState();
+}
+
+// ── Prompt bar helper ─────────────────────────
+function togglePbar(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle('open');
+}
+
+// ── Cohort AI helpers ─────────────────────────
+async function genCohortCriteria(cohort) {
+  const inputId  = 'pbar-criteria-' + cohort + '-input';
+  const statusId = 'pbar-criteria-' + cohort + '-status';
+  const outputId = 'f-criteria-' + cohort;
+  const input = document.getElementById(inputId)?.value.trim();
+  if (!input) { toast('Describe who you need first'); return; }
+  const btn = event.target;
+  const status = document.getElementById(statusId);
+  btn.disabled = true; btn.textContent = '✦ Drafting…'; if (status) status.textContent = '';
+  const objectives = S.objectives.map(o => o.objective).filter(Boolean).join('; ') || S.purpose || '';
+  const cohortLabel = cohort === 'customers' ? 'Kong customers (existing users)' : 'non-Kong participants (sourced via Respondent, paid)';
+  const prompt = `Write a participant criteria statement for a UX research study. 3-4 short bullet points covering role, technical context, experience level, and must-have/must-not-have traits. Plain language, no corporate speak, no em dashes.
+
+Cohort: ${cohortLabel}
+What the researcher described: ${input}
+${objectives ? 'Study objectives: ' + objectives : ''}
+
+Return JSON: {"result":"bullet criteria as plain text using - dashes"}`;
+  try {
+    const data = await callAgent(prompt, { max_tokens: 300 });
+    const text = data.result || '';
+    const ta = document.getElementById(outputId);
+    if (ta) { ta.value = text; scheduleAutoSave(); }
+    if (status) { status.textContent = '✓ Edit as needed'; status.style.color = 'var(--green)'; }
+  } catch(e) { if (status) { status.textContent = 'Failed'; status.style.color = 'var(--red)'; } }
+  btn.disabled = false; btn.textContent = '✦ Draft';
+}
+
+async function genCohortScreener(cohort) {
+  const inputId  = 'pbar-screener-' + cohort + '-input';
+  const statusId = 'pbar-screener-' + cohort + '-status';
+  const outputId = 'f-screener-' + cohort;
+  const criteriaId = 'f-criteria-' + cohort;
+  const input = document.getElementById(inputId)?.value.trim();
+  const criteria = document.getElementById(criteriaId)?.value || '';
+  if (!input && !criteria) { toast('Describe what you need to verify first'); return; }
+  const btn = event.target;
+  const status = document.getElementById(statusId);
+  btn.disabled = true; btn.textContent = '✦ Drafting…'; if (status) status.textContent = '';
+  const prompt = `Write a short research screener, 4-6 questions to qualify participants before a UX study session. Mix of multiple choice and short answer. No em dashes, no corporate language.
+
+What needs to be verified: ${input || criteria}
+${S.projectName ? 'Study: ' + S.projectName : ''}
+
+Format each question as:
+Q: [question text]
+Type: [Multiple choice / Short answer]
+[Options if multiple choice]
+[Pass / fail criteria in brackets]
+
+Return JSON: {"result":"screener questions as plain text"}`;
+  try {
+    const data = await callAgent(prompt, { max_tokens: 600 });
+    const text = data.result || '';
+    const ta = document.getElementById(outputId);
+    if (ta) { ta.value = text; scheduleAutoSave(); }
+    const suffix = cohort === 'noncustomers' ? '✓ Share with Shikha for sign-off before sending' : '✓ Review before sending';
+    if (status) { status.textContent = suffix; status.style.color = 'var(--green)'; }
+  } catch(e) { if (status) { status.textContent = 'Failed'; status.style.color = 'var(--red)'; } }
+  btn.disabled = false; btn.textContent = '✦ Draft screener';
+}
+
+// ── Recruit tab switching ─────────────────────
+function switchRecruitTab(tab) {
+  ['source','message','manage'].forEach(t => {
+    const el = document.getElementById('rtab-content-' + t);
+    if (el) { el.style.display = t === tab ? 'flex' : 'none'; el.style.flexDirection = 'column'; }
+    document.getElementById('rtab-' + t)?.classList.toggle('active', t === tab);
+  });
+  if (tab === 'source')  renderSourceTab();
+  if (tab === 'message') renderMessageTab();
+  if (tab === 'manage')  renderManageTab();
+}
+
+function refreshRecruitPage() {
+  const activeTab = ['source','message','manage'].find(t => document.getElementById('rtab-' + t)?.classList.contains('active')) || 'source';
+  switchRecruitTab(activeTab);
+  updateRecruitBadge();
+}
+
+function updateRecruitBadge() {
+  const n = S.participants.length;
+  const done = S.participants.filter(p => p.status === 'completed').length;
+  const badge = document.getElementById('nb-recruit');
+  const countEl = document.getElementById('manage-count');
+  if (badge) { badge.style.display = n ? '' : 'none'; badge.textContent = `${done}/${n}`; }
+  if (countEl) { countEl.style.display = n ? '' : 'none'; countEl.textContent = n; }
+  if (n) document.getElementById('nav-recruit')?.classList.add('done');
+}
+
+function updateBadges() { updateRecruitBadge(); }
+
+function syncRecruitCohorts() { renderSourceTab(); }
+
+function show(id, visible) { const el = document.getElementById(id); if (el) el.style.display = visible ? 'flex' : 'none'; }
+
+// ── SOURCE TAB ────────────────────────────────
+function renderSourceTab() {
+  const c = S.cohorts || {};
+  const any = c.internal || c.customers || c.noncustomers;
+  const noC = document.getElementById('source-no-cohorts');
+  if (noC) noC.style.display = any ? 'none' : 'block';
+  show('csrc-internal',     c.internal);
+  show('csrc-customers',    c.customers);
+  show('csrc-noncustomers', c.noncustomers);
+  buildRovoPrompt();
+  buildHexGuidance();
+  renderAddedPreviews();
+}
+
+function buildRovoPrompt() {
+  const area = S.area || '[product area]';
+  const purpose = S.purpose ? S.purpose.slice(0, 100) + (S.purpose.length > 100 ? '…' : '') : '';
+  const guide = S.methodology === 'usability' ? 'usability test' : S.methodology === 'discovery' ? 'discovery interview' : 'research session';
+  const el = document.getElementById('rovo-prompt-text');
+  if (el) el.textContent = `Help me find people internally at Kong who would be good participants for a ${guide} on ${area}.${purpose ? '\n\nContext: ' + purpose : ''}\n\nLook for a mix of: solutions engineers, field engineers, platform engineers, and anyone whose role matches the target user for this study. Include people from different timezones if possible.\n\nNote: Search Rovo directly, not Claude or Cowork. Rovo searches across Confluence which has role, team, and region data for everyone at Kong. Once you have names, DM people directly rather than posting in channels.`;
+}
+
+function buildHexGuidance() {
+  const area = S.area || '';
+  const urlHint = area.toLowerCase().includes('gateway') ? 'https://cloud.konghq.com/us/gateway-manager/%'
+    : area.toLowerCase().includes('portal') ? 'https://cloud.konghq.com/us/%/portals%'
+    : area.toLowerCase().includes('ai') ? 'https://cloud.konghq.com/us/%  (also filter AI_GATEWAY_ACTIVATED = TRUE)'
+    : 'https://cloud.konghq.com/us/[feature-path]/%';
+  const el = document.getElementById('hex-prompt-text');
+  if (el) el.textContent = `Step-by-step:\n\n1. Open Hex → Section 2: Front-End Engagement Plug & Play Queries\n2. Date range: last 90 days (30 days for recency)\n3. url_pattern for your area:\n   ${urlHint}\n4. Min Distinct URL: 4, Distinct Page Views: 3\n5. Sort by DISTINCT_URLS descending\n6. Filter: BILLING_CLASSIFICATION = enterprise\n7. Check activation flags for your area\n8. ACCOUNT_OWNER column = the CSM to DM on Slack\n9. Export → filter in Google Sheets → add CSMs here`;
+}
+
+function copyPrompt(type) {
+  const el = document.getElementById(type === 'rovo' ? 'rovo-prompt-text' : 'hex-prompt-text');
+  if (el) { navigator.clipboard.writeText(el.textContent); toast('Copied'); }
+}
+
+function renderAddedPreviews() {
+  const cohortMap = {
+    internal:    p => p.cohort === 'internal' || p.type === 'internal',
+    customer:    p => p.cohort === 'customer' || (p.type !== 'internal' && p.cohort !== 'noncustomer'),
+    noncustomer: p => p.cohort === 'noncustomer',
+  };
+  ['internal','customer','noncustomer'].forEach(cohort => {
+    const el = document.getElementById('added-preview-' + cohort); if (!el) return;
+    const ps = S.participants.filter(cohortMap[cohort]);
+    if (!ps.length) { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    el.innerHTML = `<div style="padding-top:12px;border-top:1px solid var(--border-lt)"><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);margin-bottom:6px">Added (${ps.length})</div>${ps.map(p=>`<div class="added-mini"><div class="pav" style="width:22px;height:22px;font-size:9px;flex-shrink:0">${initials(p.name)}</div><span class="added-mini-name">${esc(p.name)}</span><span class="added-mini-role">${esc(p.role||'')}</span><span class="audience-tag" style="margin-left:auto">${esc(AUDIENCE_LABELS[p.audience]||'')}</span></div>`).join('')}</div>`;
+  });
+}
+
+// ── Add panel ─────────────────────────────────
+function openAddPanel(cohort) {
+  const panel = document.getElementById('add-panel');
+  document.getElementById('ma-cohort').value = cohort;
+  ['ma-name','ma-role','ma-company','ma-contact'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const titles = { internal:'Add internal Konger', customer:'Add CSM', noncustomer:'Log confirmed participant', survey:'Add survey respondent', any:'Add participant' };
+  document.getElementById('add-panel-title').textContent = titles[cohort] || 'Add participant';
+  const audField = document.getElementById('audience-field-wrap');
+  const sel = document.getElementById('ma-audience');
+  if (cohort === 'survey') { if (audField) audField.style.display = 'none'; }
+  else {
+    if (audField) audField.style.display = 'block';
+    if (sel) sel.value = cohort === 'internal' ? 'internal-fresh' : cohort === 'customer' ? 'csm' : cohort === 'noncustomer' ? 'noncustomer' : 'internal-fresh';
+  }
+  panel.style.display = 'block';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function closeAddPanel() { document.getElementById('add-panel').style.display = 'none'; }
+
+function confirmManualAdd() {
+  const name = document.getElementById('ma-name').value.trim();
+  if (!name) { toast('Name required'); return; }
+  const cohort = document.getElementById('ma-cohort').value || 'internal';
+  if (cohort === 'survey') {
+    addSurveyP({ name, contact: document.getElementById('ma-contact').value, company: document.getElementById('ma-company').value });
+  } else {
+    addP({ name, role: document.getElementById('ma-role').value, company: document.getElementById('ma-company').value, contact: document.getElementById('ma-contact').value, cohort, audience: document.getElementById('ma-audience').value || 'internal-fresh', type: cohort === 'internal' ? 'internal' : 'external' });
+  }
+  closeAddPanel();
+}
+
+// ── CSV upload ────────────────────────────────
+let _csvUploadCohort = 'internal';
+function triggerCSVUpload(cohort) { _csvUploadCohort = cohort || 'internal'; document.getElementById('csv-input').click(); }
+function handleCSVUpload2(e) { const file = e.target.files[0]; if (!file) return; e.target.value = ''; const reader = new FileReader(); reader.onload = ev => processCSVText(ev.target.result, _csvUploadCohort); reader.readAsText(file); }
 
 function parseCSVLine(line) {
-  const result = [];
-  let cur = '', inQ = false;
+  const result = []; let cur = '', inQ = false;
   for (let i = 0; i < line.length; i++) {
     if (line[i] === '"') { inQ = !inQ; }
     else if (line[i] === ',' && !inQ) { result.push(cur); cur = ''; }
@@ -365,240 +1004,359 @@ function parseCSVLine(line) {
   return result.map(v => v.trim().replace(/^"|"$/g, ''));
 }
 
-function processCSVText(text) {
+function processCSVText(text, cohort) {
   const lines = text.trim().split(/\r?\n/).filter(Boolean);
-  if (lines.length < 2) { toast('CSV must have a header row and at least one data row'); return; }
-
+  if (lines.length < 2) { toast('CSV needs a header row and at least one data row'); return; }
   const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase());
-
-  // Map flexible column names → our fields
-  const colFor = field => {
-    const aliases = {
-      name:    ['name', 'full name', 'fullname', 'participant', 'participant name'],
-      role:    ['role', 'title', 'job title', 'jobtitle', 'position'],
-      company: ['company', 'team', 'department', 'org', 'organization'],
-      contact: ['contact', 'email', 'email address', 'emailaddress', 'slack'],
-      type:    ['type', 'participant type', 'participanttype'],
-    };
-    return aliases[field].reduce((found, a) => found !== -1 ? found : headers.indexOf(a), -1);
+  const col = field => {
+    const a = { name:['name','full name','participant'], role:['role','title','position'], company:['company','team','org'], contact:['contact','email','slack'], audience:['audience','type'] };
+    return (a[field] || [field]).reduce((f, x) => f !== -1 ? f : headers.indexOf(x), -1);
   };
-
-  const idx = { name: colFor('name'), role: colFor('role'), company: colFor('company'), contact: colFor('contact'), type: colFor('type') };
-
+  const cols = { name: col('name'), role: col('role'), company: col('company'), contact: col('contact'), audience: col('audience') };
   const rows = lines.slice(1).map(line => {
-    const cols = parseCSVLine(line);
-    return {
-      name:    idx.name    !== -1 ? cols[idx.name]    || '' : '',
-      role:    idx.role    !== -1 ? cols[idx.role]    || '' : '',
-      company: idx.company !== -1 ? cols[idx.company] || '' : '',
-      contact: idx.contact !== -1 ? cols[idx.contact] || '' : '',
-      type:    idx.type    !== -1 ? (cols[idx.type] || '').toLowerCase().startsWith('int') ? 'internal' : 'external' : 'external',
-    };
-  }).filter(r => r.name || r.role || r.contact); // skip completely empty rows
-
-  if (!rows.length) { toast('No participant rows found in CSV'); return; }
-
-  // Split into complete (have name + role) and incomplete
-  const complete   = rows.filter(r => r.name && r.role);
+    const v = parseCSVLine(line);
+    return { name: cols.name >= 0 ? v[cols.name] || '' : '', role: cols.role >= 0 ? v[cols.role] || '' : '', company: cols.company >= 0 ? v[cols.company] || '' : '', contact: cols.contact >= 0 ? v[cols.contact] || '' : '', audience: cols.audience >= 0 ? v[cols.audience] || '' : '' };
+  }).filter(r => r.name || r.contact);
+  if (cohort === 'survey') { rows.forEach(r => addSurveyP(r)); toast(`${rows.length} survey respondent${rows.length !== 1 ? 's' : ''} added`); return; }
+  const complete = rows.filter(r => r.name && r.role);
   const incomplete = rows.filter(r => !r.name || !r.role);
-
-  complete.forEach(r => addP({ ...r }));
+  complete.forEach(r => addP({ ...r, cohort, type: cohort === 'internal' ? 'internal' : 'external' }));
   if (complete.length) toast(`${complete.length} participant${complete.length > 1 ? 's' : ''} added`);
-
-  if (incomplete.length) showCSVFillPanel(incomplete);
+  if (incomplete.length) showCSVFillPanel(incomplete, cohort);
 }
 
-function showCSVFillPanel(rows) {
+function showCSVFillPanel(rows, cohort) {
   const panel = document.getElementById('csv-panel');
-  const container = document.getElementById('csv-fill-rows');
+  panel.dataset.cohort = cohort;
   panel.style.display = 'block';
-
-  container.innerHTML = rows.map((r, i) => `
+  document.getElementById('csv-fill-rows').innerHTML = rows.map((r, i) => `
     <div style="padding:14px 0;border-bottom:1px solid var(--border-lt)">
       <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);margin-bottom:10px">
         Row ${i + 1}${r.name ? ' · ' + esc(r.name) : ''}
       </div>
       <div class="g2" style="margin-bottom:8px">
-        <div>
-          <label class="fl">Name *</label>
-          <input class="inp ${!r.name ? 'inp-required' : ''}" id="cfr-name-${i}" value="${esc(r.name)}" placeholder="Full name"/>
-        </div>
-        <div>
-          <label class="fl">Role / Title *</label>
-          <input class="inp ${!r.role ? 'inp-required' : ''}" id="cfr-role-${i}" value="${esc(r.role)}" placeholder="e.g. Senior Designer"/>
-        </div>
+        <div><label class="fl">Name *</label><input class="inp ${!r.name ? 'inp-required' : ''}" id="cfr-name-${i}" value="${esc(r.name)}" placeholder="Full name"/></div>
+        <div><label class="fl">Role / Title *</label><input class="inp ${!r.role ? 'inp-required' : ''}" id="cfr-role-${i}" value="${esc(r.role)}" placeholder="e.g. Senior Engineer"/></div>
       </div>
       <div class="g2">
-        <div>
-          <label class="fl">Company / Team</label>
-          <input class="inp" id="cfr-company-${i}" value="${esc(r.company)}" placeholder="Team or org"/>
-        </div>
-        <div>
-          <label class="fl">Email / Slack</label>
-          <input class="inp" id="cfr-contact-${i}" value="${esc(r.contact)}" placeholder="email@company.com"/>
-        </div>
-      </div>
-      <div style="margin-top:8px">
-        <label class="fl">Type</label>
-        <select class="sel" id="cfr-type-${i}" style="max-width:160px">
-          <option value="external" ${r.type === 'external' ? 'selected' : ''}>External</option>
-          <option value="internal" ${r.type === 'internal' ? 'selected' : ''}>Internal</option>
-        </select>
+        <div><label class="fl">Company / Team</label><input class="inp" id="cfr-company-${i}" value="${esc(r.company)}"/></div>
+        <div><label class="fl">Slack / Email</label><input class="inp" id="cfr-contact-${i}" value="${esc(r.contact)}"/></div>
       </div>
     </div>`).join('');
-
-  // store count for confirmCSVFill
   panel.dataset.count = rows.length;
-  document.getElementById('csv-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function confirmCSVFill() {
   const panel = document.getElementById('csv-panel');
   const count = parseInt(panel.dataset.count || '0');
-  let added = 0, errors = [];
-
+  const cohort = panel.dataset.cohort || 'internal';
+  let added = 0;
   for (let i = 0; i < count; i++) {
     const name = document.getElementById(`cfr-name-${i}`)?.value.trim();
     const role = document.getElementById(`cfr-role-${i}`)?.value.trim();
-    if (!name) { errors.push(`Row ${i + 1} is missing a name`); continue; }
-    if (!role) { errors.push(`Row ${i + 1} is missing a role`); continue; }
-    addP({
-      name,
-      role,
-      company: document.getElementById(`cfr-company-${i}`)?.value || '',
-      contact: document.getElementById(`cfr-contact-${i}`)?.value || '',
-      type:    document.getElementById(`cfr-type-${i}`)?.value || 'external',
-    });
+    if (!name || !role) { toast(`Row ${i + 1} needs name and role`); return; }
+    addP({ name, role, company: document.getElementById(`cfr-company-${i}`)?.value || '', contact: document.getElementById(`cfr-contact-${i}`)?.value || '', cohort, type: cohort === 'internal' ? 'internal' : 'external' });
     added++;
   }
-
-  if (errors.length) { toast(errors[0]); return; }
   panel.style.display = 'none';
-  panel.dataset.count = '0';
   if (added) toast(`${added} participant${added > 1 ? 's' : ''} added`);
 }
 
-function toggleManual() {
-  const c = document.getElementById('manual-panel');
-  c.style.display = c.style.display === 'none' ? 'block' : 'none';
-}
-
-function addManual() {
-  const name = document.getElementById('m-name').value.trim();
-  if (!name) { toast('Name required'); return; }
-  addP({
-    name,
-    role:    document.getElementById('m-role').value,
-    company: document.getElementById('m-company').value,
-    contact: document.getElementById('m-contact').value,
-    type:    document.getElementById('m-type').value,
-  });
-  ['m-name', 'm-role', 'm-company', 'm-contact'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('manual-panel').style.display = 'none';
-  toast('Participant added');
-}
-
+// ── Core participant functions ─────────────────
 function addP(p) {
   p.id = pid++;
-  p.status = 'pending';
-  p.zoomLink = '';
+  p.status = 'identified';
+  p.sessionLink = '';
   p.transcript = '';
+  p.msg1 = '';
+  p.msg2 = '';
+  if (!p.audience) p.audience = p.type === 'internal' ? 'internal-fresh' : 'csm';
   S.participants.push(p);
-  refreshPTable();
-  updateBadges();
+  renderAddedPreviews();
+  renderMessageTab();
+  renderManageTab();
+  updateRecruitBadge();
   saveState();
-}
-
-function refreshPTable() {
-  const tbl = document.getElementById('p-tbl');
-  const empty = document.getElementById('p-empty');
-  const body = document.getElementById('p-body');
-  if (!S.participants.length) { tbl.style.display = 'none'; empty.style.display = 'block'; return; }
-  tbl.style.display = 'table';
-  empty.style.display = 'none';
-  body.innerHTML = S.participants.map(p => `<tr>
-    <td><div class="cp">${esc(p.name)}</div><div class="cs">${esc(p.contact)}</div></td>
-    <td><div class="cs">${esc(p.role)}${p.company ? ' · ' + esc(p.company) : ''}</div></td>
-    <td><span class="chip c-${p.type}">${p.type}</span></td>
-    <td><span class="chip c-pending"><span class="cdot"></span>${p.status.replace('-', ' ')}</span></td>
-    <td style="text-align:right">
-      <button class="btn xs" style="color:var(--red);border-color:#fca5a5" onclick="removeP(${p.id})">Remove</button>
-    </td>
-  </tr>`).join('');
 }
 
 function removeP(id) {
   S.participants = S.participants.filter(p => p.id !== id);
-  refreshPTable(); refreshOutreach(); updateBadges();
+  renderAddedPreviews();
+  renderMessageTab();
+  renderManageTab();
+  updateRecruitBadge();
+  updateAnalysisBtn();
   saveState();
 }
 
-// ── Outreach ──────────────────────────────────
-const STATUS_PILL = {
-  'pending':       { bg:'#f3f4f6', color:'#6b7280',  label:'Pending' },
-  'outreach-sent': { bg:'#eff6ff', color:'#1d4ed8',  label:'Outreach sent' },
-  'scheduled':     { bg:'#fef3c7', color:'#92400e',  label:'Scheduled' },
-  'completed':     { bg:'#f0fdf4', color:'#16a34a',  label:'Completed' },
-  'declined':      { bg:'#fee2e2', color:'#dc2626',  label:'Declined' },
-};
+// ── Survey participants ───────────────────────
+function addSurveyP(p) {
+  p.id = spid++;
+  p.status = 'added';
+  if (!S.surveyParticipants) S.surveyParticipants = [];
+  S.surveyParticipants.push(p);
+  renderSurveyTable();
+  updateMetrics();
+  saveState();
+}
 
+function setSurveyStatus(id, val) {
+  const p = (S.surveyParticipants || []).find(p => p.id === id);
+  if (p) { p.status = val; renderSurveyTable(); saveState(); }
+}
+
+function removeSurveyP(id) {
+  S.surveyParticipants = (S.surveyParticipants || []).filter(p => p.id !== id);
+  renderSurveyTable();
+  updateMetrics();
+  saveState();
+}
+
+function renderSurveyTable() {
+  const sp = S.surveyParticipants || [];
+  const tbl = document.getElementById('survey-tbl');
+  const empty = document.getElementById('survey-empty');
+  const body = document.getElementById('survey-body');
+  if (!tbl) return;
+  if (!sp.length) { tbl.style.display = 'none'; if (empty) empty.style.display = 'block'; return; }
+  tbl.style.display = 'table';
+  if (empty) empty.style.display = 'none';
+  body.innerHTML = sp.map(p => {
+    const s = SURVEY_STATUS[p.status] || SURVEY_STATUS['added'];
+    return `<tr class="survey-row">
+      <td><div class="cp">${esc(p.name || p.contact || '')}</div><div class="cs">${esc(p.contact || '')}</div></td>
+      <td><div class="cs">${esc(p.company || '')}</div></td>
+      <td><div class="spill-wrap"><span class="spill" style="background:${s.bg};color:${s.color}">${s.label}</span><select class="spill-sel" onchange="setSurveyStatus(${p.id},this.value)">${Object.entries(SURVEY_STATUS).map(([v,d])=>`<option value="${v}" ${p.status===v?'selected':''}>${d.label}</option>`).join('')}</select></div></td>
+      <td style="text-align:right"><button class="btn xs" style="color:var(--red);border-color:#fca5a5" onclick="removeSurveyP(${p.id})">×</button></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── MESSAGE TAB ───────────────────────────────
+function renderMessageTab() {
+  const ps = S.participants;
+  const c = S.cohorts || {};
+  const hasInternal   = ps.some(p => p.cohort === 'internal' || p.type === 'internal');
+  const hasCustomers  = ps.some(p => p.cohort === 'customer' || (p.type !== 'internal' && p.cohort !== 'noncustomer'));
+  const hasNonCustomers = ps.some(p => p.cohort === 'noncustomer');
+  const msgEmpty = document.getElementById('msg-empty');
+  if (msgEmpty) msgEmpty.style.display = !ps.length && !c.customers ? 'block' : 'none';
+  // Booking links
+  const cl = document.getElementById('f-champions-link');
+  const kl = document.getElementById('f-customer-link');
+  if (cl) cl.value = S.championsLink || '';
+  if (kl) kl.value = S.customerLink  || '';
+  // Show/hide outreach steps
+  const showEl = (id, v) => { const el = document.getElementById(id); if (el) el.style.display = v ? 'block' : 'none'; };
+  showEl('ostep-internal',    hasInternal);
+  showEl('ostep-champions',   c.customers || c.internal);
+  showEl('ostep-customers',   hasCustomers);
+  showEl('ostep-intercom',    c.customers);
+  showEl('ostep-noncustomer', hasNonCustomers);
+  // Render per-person lists
+  renderParticipantMsgList('internal', ps.filter(p => p.cohort === 'internal' || p.type === 'internal'));
+  renderParticipantMsgList('customer', ps.filter(p => p.cohort === 'customer' || (p.type !== 'internal' && p.cohort !== 'noncustomer')));
+}
+
+function renderParticipantMsgList(cohort, participants) {
+  const el = document.getElementById('msglist-' + cohort); if (!el) return;
+  if (!participants.length) {
+    el.innerHTML = `<div class="hint" style="padding:6px 0">No ${cohort === 'internal' ? 'internal Konger' : 'CSM / customer'} participants added yet. Go to the Source tab.</div>`;
+    return;
+  }
+  el.innerHTML = participants.map(p => `
+    <div class="participant-msg-card" id="msgcard-${p.id}">
+      <div class="pmc-hdr">
+        <div class="pav" style="width:24px;height:24px;font-size:9px;flex-shrink:0">${initials(p.name)}</div>
+        <div><div class="pmc-name">${esc(p.name)}</div><div class="pmc-role">${esc(p.role||'')}${p.company?' · '+esc(p.company):''}</div></div>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <select class="sel" style="max-width:230px;font-size:11px;padding:3px 6px" onchange="setAudience(${p.id},this.value)">
+            ${Object.entries(AUDIENCE_LABELS).map(([v,l])=>`<option value="${v}" ${p.audience===v?'selected':''}>${l}</option>`).join('')}
+          </select>
+          <button class="btn sm" onclick="genParticipantMessages(${p.id})">✦ Draft</button>
+        </div>
+      </div>
+      ${p.msg1 ? `
+        <div class="msg-block"><div class="msg-block-label">Message 1: short ask, send first</div><textarea class="msg-ta" onchange="saveMsg(${p.id},'msg1',this.value)">${esc(p.msg1)}</textarea></div>
+        <div class="msg-block"><div class="msg-block-label">Message 2: full context, send after they respond</div><textarea class="msg-ta" style="min-height:110px" onchange="saveMsg(${p.id},'msg2',this.value)">${esc(p.msg2)}</textarea></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn xs filled" onclick="copyBothMessages(${p.id})">Copy both</button>
+          <button class="btn xs" onclick="setStatus(${p.id},'contacted');renderManageTab();toast('Marked as Contacted')">Mark contacted →</button>
+        </div>` : `<div class="hint" style="font-size:11px;margin-top:4px">Select audience type above then click Draft.</div>`}
+    </div>`).join('');
+}
+
+function setAudience(id, val) { const p = S.participants.find(p => p.id === id); if (p) { p.audience = val; saveState(); } }
+function saveMsg(id, field, val) { const p = S.participants.find(p => p.id === id); if (p) { p[field] = val; saveState(); } }
+function copyBothMessages(id) {
+  const p = S.participants.find(p => p.id === id); if (!p) return;
+  navigator.clipboard.writeText(`MESSAGE 1, send first\n${p.msg1}\n\n---\n\nMESSAGE 2, send after they respond\n${p.msg2}\n\nMake this sound like you. change anything that feels stiff.`);
+  toast('Both messages copied');
+}
+
+async function genParticipantMessages(id) {
+  const p = S.participants.find(p => p.id === id); if (!p) return;
+  const card = document.getElementById('msgcard-' + id);
+  const btn = card?.querySelector('button[onclick*="genParticipantMessages"]');
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  const audType = p.audience || 'internal-fresh';
+  const topic = S.objectives.filter(o => o.objective).map(o => o.objective).join('; ') || S.purpose || 'research study';
+  const guide = S.methodology === 'usability' ? 'moderated usability test' : S.methodology === 'discovery' ? 'discovery interview' : 'research session';
+  const bookingLink = audType === 'csm' && S.customerLink ? S.customerLink : '';
+  const whyYou = {
+    'internal-fresh':    "MUST say they haven't worked on this product and that's the whole point. Without this they'll say 'I don't work on that.'",
+    'internal-adjacent': "Say they know the platform but not this specific flow. That middle-ground is exactly the perspective you need.",
+    'internal-rolematch':"Say they are exactly the role you're building for.",
+    'se':                "About their customer-facing role. They see how customers evaluate and adopt Kong.",
+    'field-engineer':    "About breadth: they work across many customer setups and that range is the value.",
+    'csm':               "Message 1 is a CONNECTION REQUEST only: who you are, the org name, connection ask. NO study details. Message 2: study topic, why that org fits, 30-min session, offer options: intro you, add you to a call, or let you reach out directly.",
+    'customer':          "Warm and direct. Clear time commitment, no prep needed, honest reactions are the point.",
+    'noncustomer':       "Brief, specific about why they fit.",
+  };
+  const prompt = `Draft two recruiting messages. Follow all rules.
+
+RULES:
+1. Both messages always. Msg 1: short ask, 3-4 sentences, one ask, why-you line, NO study details. Msg 2: full context, sent after they say yes.
+2. Why-you line is mandatory and specific, never generic.
+3. Write like a colleague on Slack: warm, direct, short sentences, no em dashes, no corporate language.
+4. End msg 2 with: "Make this sound like you. change anything that feels stiff."
+
+AUDIENCE: ${audType}, ${AUDIENCE_LABELS[audType] || audType}
+WHY-YOU: ${whyYou[audType] || 'Be specific.'}
+PARTICIPANT: ${p.name}${p.role ? ', ' + p.role : ''}${p.company ? ' at ' + p.company : ''}
+PROJECT: ${S.projectName || 'research study'}, ${S.area || 'our product'}
+STUDY: ${guide}
+TOPIC: ${topic}
+FROM: Shikha, design team at Kong
+${bookingLink ? 'BOOKING LINK (append to msg 2 or msg 1 if CSM): ' + bookingLink : ''}
+
+Return ONLY valid JSON: {"msg1":"...","msg2":"..."}`;
+
+  try {
+    const data = await callAgent(prompt, { max_tokens: 900 });
+    p.msg1 = data.msg1 || ''; p.msg2 = data.msg2 || '';
+    saveState();
+    const isCohortInternal = p.cohort === 'internal' || p.type === 'internal';
+    renderParticipantMsgList(isCohortInternal ? 'internal' : 'customer', S.participants.filter(x => isCohortInternal ? (x.cohort === 'internal' || x.type === 'internal') : (x.cohort === 'customer' || (x.type !== 'internal' && x.cohort !== 'noncustomer'))));
+    toast(`Messages drafted for ${p.name}`);
+  } catch(err) { toast('Draft failed: ' + err.message); }
+  if (btn) { btn.disabled = false; btn.textContent = '✦ Draft'; }
+}
+
+async function genCohortMessages(cohort) {
+  const ps = cohort === 'internal'
+    ? S.participants.filter(p => p.cohort === 'internal' || p.type === 'internal')
+    : S.participants.filter(p => p.cohort === 'customer' || (p.type !== 'internal' && p.cohort !== 'noncustomer'));
+  if (!ps.length) { toast('No participants in this cohort yet'); return; }
+  for (const p of ps) await genParticipantMessages(p.id);
+}
+
+// ── Champions brief ───────────────────────────
+async function genChampionsBrief() {
+  const btn = document.getElementById('champions-gen-btn');
+  const status = document.getElementById('champions-status');
+  btn.disabled = true; btn.textContent = '✦ Generating…'; status.textContent = '';
+  const link = S.championsLink || '';
+  const criteria = S.objectives.filter(o => o.participants).map(o => o.participants).join('; ') || 'participants familiar with the product area';
+  const guide = S.methodology === 'usability' ? 'usability test' : 'research session';
+  const prompt = `Write a short Slack message to Shikha (UX researcher at Kong) requesting help recruiting from the Kong Champions program.
+
+Include: what the study is about in plain language, what participants do (${guide}, ~30 min), participant criteria (${criteria}), no incentive (Champions volunteer).${link ? '\n\nInclude this booking link: ' + link : ''}
+
+PROJECT: ${S.projectName || 'research study'}, ${S.area || ''}
+PURPOSE: ${S.purpose || ''}
+
+Plain text only, no JSON, no subject line. Write like a colleague on Slack.`;
+  try {
+    const text = await callAgentText(prompt, { max_tokens: 400 });
+    document.getElementById('champions-text').value = text;
+    document.getElementById('champions-output').style.display = 'block';
+    status.textContent = '✓ Copy and send to Shikha on Slack';
+    status.style.color = 'var(--green)';
+  } catch(err) { status.textContent = 'Failed: ' + err.message; status.style.color = 'var(--red)'; }
+  btn.disabled = false; btn.textContent = '✦ Generate brief';
+}
+function copyChampions() { navigator.clipboard.writeText(document.getElementById('champions-text').value); toast('Copied'); }
+
+// ── Intercom email ────────────────────────────
+async function genIntercomEmail() {
+  const btn = document.getElementById('intercom-gen-btn');
+  const status = document.getElementById('intercom-status');
+  btn.disabled = true; btn.textContent = '✦ Generating…'; status.textContent = '';
+  const topic = S.objectives.filter(o => o.objective).map((o,i) => `${i+1}. ${o.objective}`).join('\n') || S.purpose || 'understanding user needs';
+  const prompt = `Write a recruitment email for Intercom to reach Kong customers directly (no CSM). Concise, warm, specific. No em dashes, no corporate language.
+
+Include: what the study is about, what's involved (30-min session, no prep, no roadmap commitments, honest reactions are the point), clear CTA. Leave [INCENTIVE] placeholder if applicable.
+
+PROJECT: ${S.projectName || 'research study'}
+PURPOSE: ${S.purpose || ''}
+AREA: ${S.area || ''}
+OBJECTIVES: ${topic}
+
+Return JSON: {"subject":"...","body":"..."}`;
+  try {
+    const data = await callAgent(prompt, { max_tokens: 700 });
+    document.getElementById('intercom-subject').value = data.subject || '';
+    document.getElementById('intercom-text').value    = data.body    || '';
+    document.getElementById('intercom-output').style.display = 'block';
+    status.textContent = '✓ Get reviewed by Shikha before sending. Send in Intercom in batches of 50–100.';
+    status.style.color = 'var(--green)';
+  } catch(err) { status.textContent = 'Failed: ' + err.message; status.style.color = 'var(--red)'; }
+  btn.disabled = false; btn.textContent = '✦ Generate email';
+}
+function copyIntercom() {
+  navigator.clipboard.writeText(`Subject: ${document.getElementById('intercom-subject').value}\n\n${document.getElementById('intercom-text').value}`);
+  toast('Copied');
+}
+
+// ── STATUS PILL & MANAGE TAB ──────────────────
 function statusPill(id, current) {
-  const s = STATUS_PILL[current] || STATUS_PILL['pending'];
+  const s = STATUS_PILL[current] || STATUS_PILL['identified'];
   return `<div class="spill-wrap">
     <span class="spill" style="background:${s.bg};color:${s.color}">${s.label}</span>
     <select class="spill-sel" onchange="setStatus(${id},this.value)">
-      ${Object.entries(STATUS_PILL).map(([v,d]) =>
-        `<option value="${v}" ${current===v?'selected':''}>${d.label}</option>`).join('')}
+      ${Object.entries(STATUS_PILL).map(([v,d]) => `<option value="${v}" ${current===v?'selected':''}>${d.label}</option>`).join('')}
     </select>
   </div>`;
 }
 
-function refreshOutreach() {
-  const tbl = document.getElementById('o-tbl');
-  const empty = document.getElementById('o-empty');
-  const body = document.getElementById('o-body');
-  if (!S.participants.length) { tbl.style.display = 'none'; empty.style.display = 'block'; updateMetrics(); return; }
+function setStatus(id, val) {
+  const p = S.participants.find(p => p.id === id); if (!p) return;
+  p.status = val;
+  renderManageTab();
+  updateRecruitBadge();
+  updateAnalysisBtn();
+  saveState();
+}
+
+function setZoom(id, val) { const p = S.participants.find(p => p.id === id); if (p) { p.sessionLink = val; saveState(); } }
+
+function renderManageTab() {
+  const tbl   = document.getElementById('manage-tbl');
+  const empty = document.getElementById('manage-empty');
+  const body  = document.getElementById('manage-body');
+  if (!tbl) return;
+  const ps = S.participants;
+  if (!ps.length) { tbl.style.display = 'none'; if (empty) empty.style.display = 'block'; return; }
   tbl.style.display = 'table';
-  empty.style.display = 'none';
-  body.innerHTML = S.participants.map(p => {
-    const hasTranscript = !!p.transcript;
+  if (empty) empty.style.display = 'none';
+  body.innerHTML = ps.map(p => {
+    const hasT = !!p.transcript;
     return `<tr>
-      <td><div class="cp">${esc(p.name)}</div><div class="cs">${esc(p.role)}${p.company ? ' · ' + esc(p.company) : ''}</div></td>
-      <td>
-        <select class="isel" onchange="setType(${p.id},this.value)">
-          <option value="internal" ${p.type === 'internal' ? 'selected' : ''}>Internal</option>
-          <option value="external" ${p.type === 'external' ? 'selected' : ''}>External</option>
-        </select>
-      </td>
+      <td><div class="cp">${esc(p.name)}</div><div class="cs">${esc(p.contact||'')}</div></td>
+      <td><div class="cs">${esc(p.role||'')}${p.company?' · '+esc(p.company):''}</div><span class="audience-tag">${esc(AUDIENCE_LABELS[p.audience]||'')}</span></td>
       <td>${statusPill(p.id, p.status)}</td>
-      <td><input class="iinp" value="${esc(p.zoomLink)}" placeholder="Paste Zoom link" onchange="setZoom(${p.id},this.value)"/></td>
+      <td><input class="iinp" value="${esc(p.sessionLink||'')}" placeholder="Session link" onchange="setZoom(${p.id},this.value)" style="width:130px"/></td>
       <td style="text-align:right;white-space:nowrap">
-        <button class="btn xs ${hasTranscript ? 'transcript-done' : 'filled'}" onclick="triggerTranscriptUpload(${p.id})">
-          ${hasTranscript ? '✓ Transcript' : '+ Transcript'}
-        </button>
+        <button class="btn xs ${hasT?'transcript-done':'filled'}" onclick="triggerTranscriptUpload(${p.id})">${hasT?'✓ Transcript':'+ Transcript'}</button>
+        <button class="btn xs" style="color:var(--red);border-color:#fca5a5;margin-left:4px" onclick="removeP(${p.id})">×</button>
       </td>
     </tr>`;
   }).join('');
+  renderSurveyTable();
   updateMetrics();
 }
-
-function setStatus(id, val) {
-  const p = S.participants.find(p => p.id === id);
-  if (!p) return;
-  p.status = val;
-  refreshOutreach();
-  updateBadges();
-  updateAnalysisBtn();
-  const nav = document.getElementById('nav-outreach');
-  if (S.participants.length && S.participants.every(p => p.status === 'completed' || p.status === 'declined')) {
-    nav.classList.add('done');
-  } else {
-    nav.classList.remove('done');
-  }
-  saveState();
-}
-function setType(id, val)   { const p = S.participants.find(p => p.id === id); if (p) { p.type = val; saveState(); } }
-function setZoom(id, val)   { const p = S.participants.find(p => p.id === id); if (p) { p.zoomLink = val; saveState(); } }
 
 // ── Transcript upload ─────────────────────────
 function parseVTT(content) {
@@ -607,8 +1365,8 @@ function parseVTT(content) {
     if (!t) return false;
     if (t.startsWith('WEBVTT')) return false;
     if (t.startsWith('NOTE')) return false;
-    if (/^\d+$/.test(t)) return false;                    // cue index
-    if (/\d{2}:\d{2}.*-->/.test(t)) return false;        // timestamp line
+    if (/^\d+$/.test(t)) return false;
+    if (/\d{2}:\d{2}.*-->/.test(t)) return false;
     return true;
   }).join('\n').trim();
 }
@@ -621,7 +1379,7 @@ function triggerTranscriptUpload(pid) {
 
 function handleTranscriptUpload(e) {
   const file = e.target.files[0];
-  const pid = parseInt(e.target.dataset.pid);
+  const pid  = parseInt(e.target.dataset.pid);
   e.target.value = '';
   if (!file || !pid) return;
 
@@ -632,13 +1390,10 @@ function handleTranscriptUpload(e) {
     const p = S.participants.find(p => p.id === pid);
     if (p) {
       p.transcript = transcript;
-      // Auto-advance to completed if still pending
-      if (p.status === 'pending' || p.status === 'outreach-sent') {
-        p.status = 'completed';
-        updateBadges();
-      }
+      if (['identified','contacted','scheduled'].includes(p.status)) p.status = 'completed';
       saveState();
-      refreshOutreach();
+      renderManageTab();
+      updateRecruitBadge();
       updateAnalysisBtn();
       toast(`Transcript uploaded for ${p.name}`);
     }
@@ -648,221 +1403,11 @@ function handleTranscriptUpload(e) {
 
 function updateMetrics() {
   const ps = S.participants;
-  document.getElementById('m-total').textContent = ps.length;
-  document.getElementById('m-done').textContent  = ps.filter(p => p.status === 'completed').length;
+  const sp = S.surveyParticipants || [];
+  document.getElementById('m-total').textContent = ps.length + sp.length;
+  document.getElementById('m-done').textContent  = ps.filter(p => p.status === 'completed').length + sp.filter(p => p.status === 'responded').length;
   document.getElementById('m-sched').textContent = ps.filter(p => p.status === 'scheduled').length;
-  document.getElementById('m-pend').textContent  = ps.filter(p => p.status === 'pending' || p.status === 'outreach-sent').length;
-}
-
-function updateBadges() {
-  const n = S.participants.length;
-  const done = S.participants.filter(p => p.status === 'completed').length;
-  const nbp = document.getElementById('nb-p'); nbp.style.display = n ? '' : 'none'; nbp.textContent = n;
-  const nbo = document.getElementById('nb-o'); nbo.style.display = n ? '' : 'none'; nbo.textContent = `${done}/${n}`;
-  if (n) document.getElementById('nav-participants').classList.add('done');
-}
-
-function updateEmailBtn() {
-  const btn = document.getElementById('email-btn');
-  if (!btn) return;
-  const t = btn.querySelector('.email-btn-text');
-  if (t) t.textContent = S.outreachEmail ? 'View email' : 'Generate email';
-}
-
-function updateSlackBtn() {
-  const btn = document.getElementById('slack-btn');
-  if (!btn) return;
-  const t = btn.querySelector('.slack-btn-text');
-  if (t) t.textContent = S.outreachSlack ? 'View Slack message' : 'Generate Slack message';
-}
-
-function showEmailPanel(email) {
-  const area = document.getElementById('o-out-area');
-  const chip = document.getElementById('o-out-chip');
-  const subjectRow = document.getElementById('o-email-subject');
-  area.style.display = 'block';
-  chip.textContent = 'External recruitment email';
-  chip.style.background = '#eff6ff';
-  chip.style.color = '#1d4ed8';
-  subjectRow.style.display = 'block';
-  document.getElementById('o-out-subject').value = email.subject || '';
-  document.getElementById('o-out-text').value = email.body || '';
-  document.getElementById('o-save-btn').style.display = '';
-}
-
-function saveOutreachEmail() {
-  S.outreachEmail = {
-    subject: document.getElementById('o-out-subject').value,
-    body: document.getElementById('o-out-text').value,
-  };
-  saveState();
-  toast('Email saved');
-}
-
-async function genOutreach(type) {
-  // External email: toggle if already generated
-  if (type === 'external-email') {
-    if (S.outreachEmail) {
-      const area = document.getElementById('o-out-area');
-      if (area.style.display !== 'none' && document.getElementById('o-email-subject').style.display !== 'none') {
-        area.style.display = 'none';
-      } else {
-        showEmailPanel(S.outreachEmail);
-      }
-      return;
-    }
-    // Generate for the first time
-    const area = document.getElementById('o-out-area');
-    const text = document.getElementById('o-out-text');
-    const chip = document.getElementById('o-out-chip');
-    area.style.display = 'block';
-    document.getElementById('o-email-subject').style.display = 'none';
-    document.getElementById('o-save-btn').style.display = 'none';
-    chip.textContent = 'Generating email…';
-    chip.style.background = '#eff6ff';
-    chip.style.color = '#1d4ed8';
-    text.value = '';
-
-    const objSummary = S.objectives.filter(o => o.objective)
-      .map((o, i) => `${i + 1}. [${o.priority}] ${o.objective}`).join('\n')
-      || 'Understanding user workflow pain points';
-    const methodology = S.objectives.filter(o => o.methodology).map(o => o.methodology).join('; ') || '30-minute virtual session';
-    const targetParts = S.objectives.filter(o => o.participants).map(o => o.participants).join('; ') || 'relevant users';
-    const researcher = (S.researcher || []).join(', ') || '[Researcher Name]';
-
-    const prompt = `Fill in this participant recruitment email template using the project context below. Replace ALL bracketed placeholders with specific details. Return ONLY a JSON object with no markdown: {"subject":"...","body":"..."}
-
-TEMPLATE TO FILL:
-Hi [Customer's First Name],
-
-We're looking for ways to make [product or feature] better for customers like you. To do that, we'd love to hear your feedback!
-
-We're conducting a research study to understand how we can improve [specific aspects of the product/service]. Your insights would be incredibly valuable in shaping our next steps.
-
-What's involved
-• A [duration] virtual session with one of our team members.
-• Sharing your honest thoughts about [specific product feature or topic].
-
-When
-• [Provide date range or scheduling flexibility, e.g., "At a time that's convenient for you in the next two weeks."]
-
-What's in it for you
-• [A $amount gift card/reward, or simply "the opportunity to shape the future of [Product/Service Name]."]
-
-Interested?
-Click [here to schedule your session] or reply to this email with your availability, and we'll handle the rest.
-
-We look forward to hearing from you!
-
-Best regards,
-${researcher}
-Researcher
-[Contact Information]
-Kong
-
-PROJECT CONTEXT:
-Project: "${S.projectName || 'User research study'}"
-Product area: ${S.area || ''}
-Purpose: ${S.purpose || 'Understanding user needs'}
-${S.context ? 'Context: ' + S.context : ''}
-Target participants: ${targetParts}
-Methodology: ${methodology}
-Learning objectives:
-${objSummary}
-
-For the subject line use the pattern: "Help us improve [specific product/feature from context]!"`;
-
-    try {
-      const data = await callAgent(prompt);
-      S.outreachEmail = { subject: data.subject || '', body: data.body || '' };
-      saveState();
-      updateEmailBtn();
-      showEmailPanel(S.outreachEmail);
-    } catch (e) {
-      text.value = 'Generation failed — fill in project details in Setup first.';
-    }
-    return;
-  }
-
-  // Internal Slack — toggle if already generated
-  if (S.outreachSlack) {
-    const area = document.getElementById('o-out-area');
-    const isSlackVisible = area.style.display !== 'none' && document.getElementById('o-email-subject').style.display === 'none';
-    if (isSlackVisible) { area.style.display = 'none'; return; }
-    showSlackPanel(S.outreachSlack);
-    return;
-  }
-
-  // Generate for the first time
-  const area = document.getElementById('o-out-area');
-  const text = document.getElementById('o-out-text');
-  const chip = document.getElementById('o-out-chip');
-  area.style.display = 'block';
-  document.getElementById('o-email-subject').style.display = 'none';
-  document.getElementById('o-save-btn').style.display = 'none';
-  chip.textContent = 'Generating Slack message…';
-  chip.style.background = '#fdf4ff';
-  chip.style.color = '#7c3aed';
-  text.value = '';
-
-  const objSummary = S.objectives.filter(o => o.objective)
-    .map(o => `• ${o.objective}`).join('\n') || '• Understanding user workflow pain points';
-  const researcher = (S.researcher || []).join(', ') || '[your name]';
-  const methodology = S.objectives.filter(o => o.methodology).map(o => o.methodology).join('; ');
-  const duration = methodology.toLowerCase().includes('45') ? '45' : '30';
-
-  const prompt = `Generate an internal Slack message to recruit a colleague for a user research study.
-
-Follow this exact template style — keep it brief, casual, and direct (2–4 sentences max):
-
-"Hey [First Name], I'm ${researcher} from the design team. I'm working on a study on how [research topic from context]. [One optional sentence: a specific observation about why this person would be helpful, if context supports it.] I thought you could be a really helpful person to talk to before we take this further. Would you be open to a ${duration}-minute chat?"
-
-Rules:
-- Use [First Name] as the placeholder for the recipient's name
-- Base "research topic" on the purpose/context/objectives below — be specific, not generic
-- The optional observation should feel personal and insightful if context supports it, otherwise omit it
-- No subject line, no sign-off, no emojis
-- Return ONLY: {"message":"..."}
-
-PROJECT CONTEXT:
-Project: "${S.projectName || 'User research study'}"
-Purpose: ${S.purpose || ''}
-${S.context ? 'Context: ' + S.context : ''}
-Product area: ${S.area || ''}
-Learning objectives:
-${objSummary}`;
-
-  try {
-    const data = await callAgent(prompt);
-    S.outreachSlack = data.message || '';
-    saveState();
-    updateSlackBtn();
-    showSlackPanel(S.outreachSlack);
-  } catch (e) {
-    text.value = 'Generation failed — fill in project details in Setup first.';
-  }
-}
-
-function showSlackPanel(message) {
-  const area = document.getElementById('o-out-area');
-  const chip = document.getElementById('o-out-chip');
-  area.style.display = 'block';
-  document.getElementById('o-email-subject').style.display = 'none';
-  document.getElementById('o-save-btn').style.display = 'none';
-  chip.textContent = 'Internal Slack message';
-  chip.style.background = '#fdf4ff';
-  chip.style.color = '#7c3aed';
-  document.getElementById('o-out-text').value = message;
-}
-
-function copyOut() {
-  const subject = document.getElementById('o-out-subject');
-  const body = document.getElementById('o-out-text').value;
-  const full = subject.style.display !== 'none' && subject.value
-    ? `Subject: ${subject.value}\n\n${body}`
-    : body;
-  navigator.clipboard.writeText(full);
-  toast('Copied to clipboard');
+  document.getElementById('m-pend').textContent  = ps.filter(p => ['identified','contacted'].includes(p.status)).length;
 }
 
 // ── Analysis ──────────────────────────────────
@@ -888,8 +1433,6 @@ async function runAnalysis() {
   if (reBtn)   { reBtn.textContent   = 'Analysing…'; reBtn.disabled   = true; }
   readObjectives();
 
-  // Cap each transcript at ~5 000 chars to stay within OpenAI's TPM limits.
-  // ~4 chars ≈ 1 token, so 5 000 chars ≈ 1 250 tokens per participant.
   const TRANSCRIPT_CHAR_LIMIT = 5000;
   const completed = S.participants.filter(p => p.status === 'completed');
   const participantData = completed.length
@@ -900,7 +1443,7 @@ async function runAnalysis() {
           : raw;
         return `PARTICIPANT: ${p.name} (${p.role}${p.company ? ' at ' + p.company : ''})\nTRANSCRIPT:\n${truncated}`;
       }).join('\n\n---\n\n')
-    : 'No completed interviews. Simulate findings for a study on researcher workflow fragmentation (Notion, Calendly, Dovetail, etc.) with 3 participants.';
+    : 'No completed interviews. Simulate findings for a study on researcher workflow fragmentation with 3 participants.';
 
   const objList = S.objectives.filter(o => o.objective)
     .map((o, i) => `${i + 1}. [${o.priority}] ${o.objective}`)
@@ -945,19 +1488,14 @@ function renderAnalysis(data) {
   const syn = data.synthesis || S.synthesisResult;
   S.synthesisResult = syn;
 
-  // ── Header row with Re-analyze button ─────────────────────────────────────
   out.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between">
     <div style="font-size:12px;color:var(--t3)">${participants.length} participant${participants.length !== 1 ? 's' : ''} analysed</div>
     <button class="btn" id="a-reanalyze-btn" onclick="runAnalysis()">Re-analyze</button>
   </div>`;
 
-  // ── 1. Synthesis at top ────────────────────────────────────────────────────
   if (syn) {
-    let h = `<div class="panel">
-      <div class="ptitle">Synthesis</div>`;
-    if (syn.tldr) {
-      h += `<div style="font-size:14px;line-height:1.7;padding:12px 14px;background:var(--page);border-radius:var(--rsm);margin-bottom:14px">${esc(syn.tldr)}</div>`;
-    }
+    let h = `<div class="panel"><div class="ptitle">Synthesis</div>`;
+    if (syn.tldr) h += `<div style="font-size:14px;line-height:1.7;padding:12px 14px;background:var(--page);border-radius:var(--rsm);margin-bottom:14px">${esc(syn.tldr)}</div>`;
     if (syn.themes?.length) {
       h += `<div class="ptitle" style="margin-top:4px">Themes</div>`;
       h += syn.themes.map(t =>
@@ -984,9 +1522,7 @@ function renderAnalysis(data) {
     out.innerHTML += h;
   }
 
-  // ── 2. Objective-first breakdown ───────────────────────────────────────────
   if (participants.length) {
-    // Collect all unique objectives in order
     const allObjectives = [];
     participants.forEach(pu => {
       (pu.byObjective || []).forEach((ob, i) => {
@@ -1017,10 +1553,9 @@ function renderAnalysis(data) {
       out.innerHTML += h;
     }
   }
-
 }
 
-// ── Finalize ──────────────────────────────────
+// ── Generate document ─────────────────────────
 function generateDocument() {
   readObjectives();
   const html = buildDocHTML();
@@ -1028,10 +1563,7 @@ function generateDocument() {
   const url = URL.createObjectURL(blob);
   const win = window.open(url, '_blank');
   if (!win) toast('Pop-up blocked — allow pop-ups and try again');
-  else {
-    document.getElementById('nav-finalize').classList.add('done');
-    toast('Document opened — use Print → Save as PDF');
-  }
+  else toast('Document opened — use Print → Save as PDF');
 }
 
 function buildDocHTML() {
@@ -1074,7 +1606,6 @@ function buildDocHTML() {
       </tr>`).join('')
     : `<tr><td colspan="7" style="padding:14px;text-align:center;color:#9ca3af;font-style:italic;border:1px solid #e5e7eb">No participants added</td></tr>`;
 
-  // Analysis section
   let analysisHTML = '';
   if (S.analysisResult?.participants?.length) {
     analysisHTML = `
@@ -1084,7 +1615,6 @@ function buildDocHTML() {
         <div style="margin-bottom:28px;padding:16px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb">
           <div style="font-weight:600;font-size:14px;margin-bottom:4px">${esc(pu.name)}</div>
           <div style="font-size:12px;color:#6b7280;margin-bottom:10px">${esc(pu.role)}</div>
-          ${pu.summary ? `<p style="font-size:13px;color:#374151;line-height:1.6;margin:0 0 12px">${esc(pu.summary)}</p>` : ''}
           ${(pu.byObjective || []).map((ob, i) => `
             <div style="margin-bottom:10px;padding-left:12px;border-left:3px solid #d1d5db">
               <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af;margin-bottom:3px">Objective ${i + 1}</div>
@@ -1097,7 +1627,6 @@ function buildDocHTML() {
       `).join('')}`;
   }
 
-  // Synthesis section
   let synthesisHTML = '';
   const syn = S.synthesisResult;
   if (syn) {
@@ -1131,108 +1660,39 @@ function buildDocHTML() {
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Inter', sans-serif; font-size: 13px; color: #111827; background: #fff; padding: 48px 56px; max-width: 960px; margin: 0 auto; }
-    @media print {
-      body { padding: 24px 32px; }
-      .no-print { display: none; }
-    }
+    @media print { body { padding: 24px 32px; } .no-print { display: none; } }
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
     th { background: #f9fafb; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; padding: 9px 12px; border: 1px solid #e5e7eb; text-align: left; }
     p { margin: 0; }
   </style>
 </head>
 <body>
-
-  <!-- Print hint -->
   <div class="no-print" style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:10px 14px;margin-bottom:28px;font-size:12px;color:#0369a1">
-    💡 To save as PDF: <strong>File → Print → Save as PDF</strong> (set margins to "Minimal" for best results)
+    To save as PDF: <strong>File → Print → Save as PDF</strong> (set margins to "Minimal" for best results)
   </div>
-
-  <!-- Section label -->
-  <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#9ca3af;margin-bottom:10px">🎯 Research Goals</div>
-
-  <!-- Title -->
+  <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#9ca3af;margin-bottom:10px">Research Goals</div>
   <h1 style="font-size:28px;font-weight:600;color:#111827;margin-bottom:16px;line-height:1.2">Research plan: ${esc(name)}</h1>
-
-  <!-- Tip box -->
-  <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:12px 16px;margin-bottom:24px;font-size:13px;color:#166534;line-height:1.6">
-    💡 This research plan is yours and customizable, but everything in green gets added to our collection of research so it's accessible and usable.
-  </div>
-
-  <!-- Metadata -->
   <table style="margin-bottom:24px;width:auto;min-width:400px">
     <tbody>
-      <tr>
-        <td style="padding:8px 16px 8px 0;font-weight:500;font-size:12px;color:#6b7280;white-space:nowrap;border:none;width:120px">Date</td>
-        <td style="padding:8px 0;border:none;font-size:13px">${esc(fmtDate(S.date)) || '—'}</td>
-      </tr>
-      <tr>
-        <td style="padding:8px 16px 8px 0;font-weight:500;font-size:12px;color:#6b7280;border:none">Product Area</td>
-        <td style="padding:8px 0;border:none;font-size:13px">${esc(S.area) || '—'}</td>
-      </tr>
-      <tr>
-        <td style="padding:8px 16px 8px 0;font-weight:500;font-size:12px;color:#6b7280;border:none">Designer</td>
-        <td style="padding:8px 0;border:none;font-size:13px">${esc((S.designer||[]).join(', ')) || '—'}</td>
-      </tr>
-      <tr>
-        <td style="padding:8px 16px 8px 0;font-weight:500;font-size:12px;color:#6b7280;border:none">Researcher</td>
-        <td style="padding:8px 0;border:none;font-size:13px">${esc((S.researcher||[]).join(', ')) || '—'}</td>
-      </tr>
+      <tr><td style="padding:8px 16px 8px 0;font-weight:500;font-size:12px;color:#6b7280;white-space:nowrap;border:none;width:120px">Date</td><td style="padding:8px 0;border:none;font-size:13px">${esc(fmtDate(S.date)) || '—'}</td></tr>
+      <tr><td style="padding:8px 16px 8px 0;font-weight:500;font-size:12px;color:#6b7280;border:none">Product Area</td><td style="padding:8px 0;border:none;font-size:13px">${esc(S.area) || '—'}</td></tr>
+      <tr><td style="padding:8px 16px 8px 0;font-weight:500;font-size:12px;color:#6b7280;border:none">Designer</td><td style="padding:8px 0;border:none;font-size:13px">${esc((S.designer||[]).join(', ')) || '—'}</td></tr>
+      <tr><td style="padding:8px 16px 8px 0;font-weight:500;font-size:12px;color:#6b7280;border:none">Researcher</td><td style="padding:8px 0;border:none;font-size:13px">${esc((S.researcher||[]).join(', ')) || '—'}</td></tr>
     </tbody>
   </table>
-
-  <!-- Purpose -->
   <h2 style="font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:8px">Purpose</h2>
   <div style="padding:14px 16px;background:#f9fafb;border-radius:6px;border:1px solid #e5e7eb;font-size:13px;color:#374151;line-height:1.7;margin-bottom:24px;font-style:italic">
     ${S.purpose ? esc(S.purpose) : '<span style="color:#9ca3af">Not specified</span>'}
   </div>
-
-  ${S.context ? `
-  <h2 style="font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:8px">Context</h2>
-  <div style="padding:14px 16px;background:#f9fafb;border-radius:6px;border:1px solid #e5e7eb;font-size:13px;color:#374151;line-height:1.7;margin-bottom:24px">
-    ${esc(S.context)}
-  </div>
-  ` : ''}
-
-  <!-- Learning objectives -->
+  ${S.context ? `<h2 style="font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:8px">Context</h2><div style="padding:14px 16px;background:#f9fafb;border-radius:6px;border:1px solid #e5e7eb;font-size:13px;color:#374151;line-height:1.7;margin-bottom:24px">${esc(S.context)}</div>` : ''}
   <h2 style="font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:12px">Learning objectives</h2>
   <table style="margin-bottom:40px">
-    <thead>
-      <tr>
-        <th style="width:90px">Priority</th>
-        <th>Objective</th>
-        <th>Hypotheses</th>
-        <th>Key questions</th>
-        <th>Target participants</th>
-        <th>Methodology</th>
-        <th>Goal targets (if applicable)</th>
-      </tr>
-    </thead>
+    <thead><tr><th style="width:90px">Priority</th><th>Objective</th><th>Hypotheses</th><th>Key questions</th><th>Target participants</th><th>Methodology</th><th>Goal targets</th></tr></thead>
     <tbody>${objRows}</tbody>
   </table>
-
-  <!-- Participants -->
-  ${parts.length ? `
-  <div style="page-break-before:always"></div>
-  <h2 style="font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:12px">Participant recruiting tracker</h2>
-  <table style="margin-bottom:40px">
-    <thead>
-      <tr>
-        <th>Participant Name</th>
-        <th>Participant Email</th>
-        <th>Company</th>
-        <th>Participation Status</th>
-        <th>Paid Status</th>
-        <th>Amount</th>
-        <th>Notes</th>
-      </tr>
-    </thead>
-    <tbody>${partRows}</tbody>
-  </table>
-  ` : ''}
-
+  ${parts.length ? `<div style="page-break-before:always"></div><h2 style="font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:12px">Participant recruiting tracker</h2><table style="margin-bottom:40px"><thead><tr><th>Participant Name</th><th>Participant Email</th><th>Company</th><th>Participation Status</th><th>Paid Status</th><th>Amount</th><th>Notes</th></tr></thead><tbody>${partRows}</tbody></table>` : ''}
   ${analysisHTML}
   ${synthesisHTML}
-
 </body>
 </html>`;
 }
@@ -1258,7 +1718,7 @@ function renderDocPreview() {
   document.getElementById('dsub').textContent = `${name} · ${fmtDate(S.date) || 'No date set'}`;
   document.getElementById('docprev').innerHTML = `
     <div class="dp-h1">Research plan: ${esc(name)}</div>
-    <div class="dp-tip">💡 This research plan is yours and customizable. Everything gets added to your collection of research so it's accessible and usable.</div>
+    <div class="dp-tip">This research plan is yours and customizable. Everything gets added to your collection of research so it's accessible and usable.</div>
     <div class="dp-meta">
       <div class="dp-mr"><div class="dp-ml">Date</div><div class="dp-mv">${esc(fmtDate(S.date))}</div></div>
       <div class="dp-mr"><div class="dp-ml">Product area</div><div class="dp-mv">${esc(S.area)}</div></div>
@@ -1277,31 +1737,13 @@ function renderDocPreview() {
   `;
 }
 
+// ── Auto-save listeners ───────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  ['f-name','f-date','f-area','f-purpose','f-context'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', scheduleAutoSave);
+  });
+});
+
 // ── Init ──────────────────────────────────────
-if (loadState()) {
-  restoreUI();
-} else {
-  addObjRow({ priority: 'Must' });
-}
-goTo('setup');
-
-// Auto-save listeners for Setup fields
-['f-name','f-date','f-area','f-purpose','f-context'].forEach(id => {
-  document.getElementById(id)?.addEventListener('input', scheduleAutoSave);
-  document.getElementById(id)?.addEventListener('change', scheduleAutoSave);
-});
-// Objectives — event delegation (handles dynamic rows)
-document.getElementById('obj-rows').addEventListener('input', scheduleAutoSave);
-document.getElementById('obj-rows').addEventListener('change', scheduleAutoSave);
-
-// Flush any pending debounce and save immediately before refresh / tab close
-window.addEventListener('beforeunload', () => {
-  clearTimeout(_autoSaveTimer);
-  S.projectName = document.getElementById('f-name')?.value || S.projectName;
-  S.date        = document.getElementById('f-date')?.value || S.date;
-  S.area        = document.getElementById('f-area')?.value || S.area;
-  S.purpose     = document.getElementById('f-purpose')?.value || S.purpose;
-  S.context     = document.getElementById('f-context')?.value || S.context;
-  readObjectives();
-  saveState();
-});
+showDirectory();

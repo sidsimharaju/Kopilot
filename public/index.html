@@ -10,6 +10,36 @@
 </head>
 <body>
 
+<!-- ── DIRECTORY VIEW ── -->
+<div id="dir-view" class="dir-view" style="display:none">
+  <header class="dir-hdr">
+    <div class="tb-logo">
+      <div class="lmark">
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+          <circle cx="7" cy="7" r="4.5" stroke="white" stroke-width="1.6"/>
+          <circle cx="7" cy="7" r="1.8" fill="white"/>
+        </svg>
+      </div>
+      Research Cockpit
+    </div>
+    <div class="dir-tabs">
+      <button class="dir-tab active" data-tab="projects" onclick="switchTab('projects')">Projects</button>
+      <button class="dir-tab" data-tab="customers" onclick="switchTab('customers')">Customers</button>
+    </div>
+    <button class="btn filled" id="dir-new-btn" onclick="newProject()">+ New research</button>
+  </header>
+  <div class="dir-body">
+    <div id="dir-empty" class="dir-empty" style="display:none">
+      <div class="dei">🔬</div>
+      <div class="del">No research projects yet</div>
+      <div class="ded">Create your first research project to get started.</div>
+      <button class="btn filled" style="margin-top:8px" onclick="newProject()">+ New research</button>
+    </div>
+    <div id="dir-grid" class="dir-grid"></div>
+    <div id="dir-customers" style="display:none"></div>
+  </div>
+</div>
+
 <!-- ── DOC PREVIEW DRAWER ── -->
 <div class="overlay" id="overlay" onclick="closeDrawer()"></div>
 <div class="drawer" id="drawer">
@@ -23,12 +53,15 @@
   <div class="dbody"><div class="docprev" id="docprev"></div></div>
 </div>
 
-<!-- ── APP ── -->
-<div class="app">
+<!-- ── COCKPIT VIEW ── -->
+<div class="app" id="cockpit-view" style="display:none">
 
   <!-- TOPBAR -->
   <header class="topbar">
     <div class="tb-logo">
+      <button class="back-btn" onclick="backToDirectory()" title="All projects">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
       <div class="lmark">
         <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
           <circle cx="7" cy="7" r="4.5" stroke="white" stroke-width="1.6"/>
@@ -39,7 +72,10 @@
     </div>
     <div class="tb-title" id="tb-title">New project</div>
     <div class="tb-right">
-      <button class="btn sm" onclick="newProject()" title="Start a new project">+ New research</button>
+      <button class="btn sm filled" onclick="generateDocument()" title="Generate document">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="margin-right:4px;vertical-align:-2px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="1.5"/><polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="1.5"/></svg>
+        Generate document
+      </button>
       <button class="ib" id="prev-btn" onclick="openDrawer()" title="Preview doc">
         <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
           <path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.4"/>
@@ -59,20 +95,12 @@
       <span class="nav-label">Setup</span>
       <div class="ndot"></div>
     </div>
-    <div class="nav" id="nav-participants" onclick="goTo('participants')">
+    <div class="nav" id="nav-recruit" onclick="goTo('recruit')">
       <span class="nav-icon">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       </span>
-      <span class="nav-label">Participants</span>
-      <span class="nbadge" id="nb-p" style="display:none">0</span>
-      <div class="ndot"></div>
-    </div>
-    <div class="nav" id="nav-outreach" onclick="goTo('outreach')">
-      <span class="nav-icon">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-      </span>
-      <span class="nav-label">Outreach</span>
-      <span class="nbadge" id="nb-o" style="display:none">0/0</span>
+      <span class="nav-label">Recruit</span>
+      <span class="nbadge" id="nb-recruit" style="display:none">0</span>
       <div class="ndot"></div>
     </div>
     <div class="nav" id="nav-analysis" onclick="goTo('analysis')">
@@ -80,13 +108,6 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       </span>
       <span class="nav-label">Analysis</span>
-      <div class="ndot"></div>
-    </div>
-    <div class="nav" id="nav-finalize" onclick="goTo('finalize')">
-      <span class="nav-icon">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-      </span>
-      <span class="nav-label">Finalize</span>
       <div class="ndot"></div>
     </div>
   </nav>
@@ -148,7 +169,7 @@
           <textarea class="ta" id="f-purpose" placeholder="What is motivating you to conduct this research? What do you need to learn at the highest level?"></textarea>
         </div>
         <div>
-          <label class="fl">Context & additional background</label>
+          <label class="fl">Context &amp; additional background</label>
           <textarea class="ta" id="f-context" placeholder="Any additional context, constraints, or background. This is also used to generate outreach messages…"></textarea>
         </div>
       </div>
@@ -173,115 +194,542 @@
         <div style="margin-top:8px"><button class="btn sm" onclick="addObjRow()">+ Add row</button></div>
       </div>
 
-    </div>
+      <!-- ══ RESEARCH DESIGN ══ -->
+      <div class="panel" id="research-design-panel">
+        <div class="ptitle">Research design</div>
 
-    <!-- ══ PARTICIPANTS ══ -->
-    <div class="page" id="page-participants">
-      <div class="panel">
-        <div class="ptitle">
-          Added to project
-          <div class="r">
-            <button class="btn sm" onclick="triggerCSVUpload()">+ Upload CSV</button>
-            <button class="btn sm" onclick="toggleManual()">+ Add manually</button>
-          </div>
-        </div>
-        <div id="p-empty" class="hint" style="padding:6px 0">No participants yet.</div>
-        <table class="tbl" id="p-tbl" style="display:none">
-          <thead><tr><th>Name</th><th>Role</th><th>Type</th><th>Status</th><th></th></tr></thead>
-          <tbody id="p-body"></tbody>
-        </table>
-      </div>
-
-      <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="handleCSVUpload(event)"/>
-
-      <div class="panel" id="csv-panel" style="display:none">
-        <div class="ptitle">Fill in missing fields</div>
-        <p class="hint" style="margin-bottom:4px">Some rows from your CSV are missing required fields. Fill them in below.</p>
-        <div id="csv-fill-rows"></div>
-        <div style="display:flex;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border-lt)">
-          <button class="btn filled" onclick="confirmCSVFill()">Add all</button>
-          <button class="btn" onclick="document.getElementById('csv-panel').style.display='none'">Cancel</button>
-        </div>
-      </div>
-
-      <div class="panel" id="manual-panel" style="display:none">
-        <div class="ptitle">Add manually</div>
-        <div class="g2" style="margin-bottom:12px">
-          <div><label class="fl">Full name</label><input class="inp" id="m-name" placeholder="Jane Doe"/></div>
-          <div><label class="fl">Role / Title</label><input class="inp" id="m-role" placeholder="Senior Designer"/></div>
-        </div>
-        <div class="g2" style="margin-bottom:12px">
-          <div><label class="fl">Company / Team</label><input class="inp" id="m-company" placeholder="Platform team"/></div>
-          <div><label class="fl">Email / Slack</label><input class="inp" id="m-contact" placeholder="jane@company.com"/></div>
-        </div>
-        <div style="margin-bottom:14px">
-          <label class="fl">Type</label>
-          <select class="sel" id="m-type" style="max-width:180px">
-            <option value="internal">Internal</option>
-            <option value="external">External</option>
-          </select>
-        </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn filled" onclick="addManual()">Add participant</button>
-          <button class="btn" onclick="toggleManual()">Cancel</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══ OUTREACH & INTERVIEWS ══ -->
-    <div class="page" id="page-outreach">
-      <div class="mrow">
-        <div class="met"><div class="met-l">Total</div><div class="met-v" id="m-total">0</div></div>
-        <div class="met"><div class="met-l">Completed</div><div class="met-v g" id="m-done">0</div></div>
-        <div class="met"><div class="met-l">Scheduled</div><div class="met-v" id="m-sched">0</div></div>
-        <div class="met"><div class="met-l">Needs action</div><div class="met-v r" id="m-pend">0</div></div>
-      </div>
-
-      <div class="panel">
-        <div class="ptitle">
-          Sample outreach messages
-          <div class="r">
-            <button class="btn slack sm" id="slack-btn" onclick="genOutreach('internal-slack')">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 15a2 2 0 0 1-2 2 2 2 0 0 1-2-2 2 2 0 0 1 2-2h2zm1 0a2 2 0 0 1 2-2 2 2 0 0 1 2 2v5a2 2 0 0 1-2 2 2 2 0 0 1-2-2zm2-8a2 2 0 0 1-2-2 2 2 0 0 1 2-2 2 2 0 0 1 2 2v2zm0 1a2 2 0 0 1 2 2 2 2 0 0 1-2 2H4a2 2 0 0 1-2-2 2 2 0 0 1 2-2zm8 2a2 2 0 0 1 2-2 2 2 0 0 1 2 2 2 2 0 0 1-2 2h-2zm-1 0a2 2 0 0 1-2 2 2 2 0 0 1-2-2V5a2 2 0 0 1 2-2 2 2 0 0 1 2 2zm-2 8a2 2 0 0 1 2 2 2 2 0 0 1-2 2 2 2 0 0 1-2-2v-2zm0-1a2 2 0 0 1-2-2 2 2 0 0 1 2-2h5a2 2 0 0 1 2 2 2 2 0 0 1-2 2z"/></svg>
-              <span class="slack-btn-text">Generate Slack message</span>
+        <!-- Methodology -->
+        <div style="margin-bottom:20px">
+          <label class="fl">Methodology</label>
+          <div class="hint" style="margin-bottom:8px">One method for the whole study. Mixing methods means separate studies.</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button class="method-btn active" id="mb-usability" onclick="setMethod('usability')">
+              <div style="font-weight:500;font-size:13px;margin-bottom:2px">Moderated usability test</div>
+              <div style="font-size:11px;color:var(--t3)">Watch someone use something</div>
             </button>
-            <button class="btn email sm" id="email-btn" onclick="genOutreach('external-email')">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" stroke-width="1.5"/><polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="1.5"/></svg>
-              <span class="email-btn-text">Generate email</span>
+            <button class="method-btn" id="mb-discovery" onclick="setMethod('discovery')">
+              <div style="font-weight:500;font-size:13px;margin-bottom:2px">Discovery interview</div>
+              <div style="font-size:11px;color:var(--t3)">Understand how someone thinks</div>
             </button>
           </div>
         </div>
-        <p class="hint" style="margin-bottom:14px">Generated from your project name, purpose, context, and learning objectives. Use as a starting template.</p>
-        <div id="o-out-area" style="display:none">
-          <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
-            <span class="chip" id="o-out-chip" style="background:#f3f4f6;color:#374151">—</span>
+
+        <hr style="margin-bottom:18px"/>
+
+        <!-- Cohorts -->
+        <div style="margin-bottom:18px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px">
+            <label class="fl" style="margin-bottom:0">Who are you talking to?</label>
+            <span class="hint" id="cohort-total-summary"></span>
           </div>
-          <div id="o-email-subject" style="display:none;margin-bottom:10px">
-            <label class="fl">Subject</label>
-            <input class="inp" id="o-out-subject" placeholder="Email subject line"/>
+          <p class="hint" style="margin-bottom:12px;line-height:1.6">Select every cohort you plan to include. Details expand below each one. Aim for 6 sessions total across cohorts.</p>
+
+          <!-- SELECTOR ROW -->
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+
+            <button class="cohort-sel-btn" id="csel-internal" onclick="toggleCohortSel('internal')">
+              <div class="cohort-sel-check" id="csel-check-internal"></div>
+              <div class="cohort-sel-body">
+                <div class="cohort-sel-name">Internal Kongers</div>
+                <div class="cohort-sel-desc">Practice runs + proxy signal</div>
+                <div class="cohort-sel-count">1–3 sessions</div>
+              </div>
+            </button>
+
+            <button class="cohort-sel-btn" id="csel-customers" onclick="toggleCohortSel('customers')">
+              <div class="cohort-sel-check" id="csel-check-customers"></div>
+              <div class="cohort-sel-body">
+                <div class="cohort-sel-name">Kong customers</div>
+                <div class="cohort-sel-desc">Primary signal source</div>
+                <div class="cohort-sel-count">3–5 sessions</div>
+              </div>
+            </button>
+
+            <button class="cohort-sel-btn cohort-sel-paid" id="csel-noncustomers" onclick="toggleCohortSel('noncustomers')">
+              <div class="cohort-sel-check" id="csel-check-noncustomers"></div>
+              <div class="cohort-sel-body">
+                <div class="cohort-sel-name">Non-Kong customers</div>
+                <div class="cohort-sel-desc">Competitive perspective</div>
+                <div class="cohort-sel-count">2–3 sessions · paid</div>
+              </div>
+            </button>
+
           </div>
-          <textarea class="ta" id="o-out-text" style="min-height:300px;font-family:inherit;font-size:13px;line-height:1.7"></textarea>
-          <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
-            <button class="btn sm filled" id="o-save-btn" style="display:none" onclick="saveOutreachEmail()">Save</button>
-            <button class="btn sm" onclick="copyOut()">Copy</button>
-            <button class="btn sm" onclick="document.getElementById('o-out-area').style.display='none'">Dismiss</button>
-          </div>
+
+          <!-- DETAIL AREAS -->
+          <div style="display:flex;flex-direction:column;gap:12px">
+
+            <!-- INTERNAL DETAIL -->
+            <div class="cohort-detail" id="cdetail-internal" style="display:none">
+              <div class="cohort-detail-hdr">
+                <span class="cohort-detail-name">Internal Kongers</span>
+                <div class="sessions-trio" style="margin-left:auto">
+                  <div class="sessions-trio-field"><span>min</span><input type="number" id="f-sessions-internal-min" min="0" placeholder="1" oninput="scheduleAutoSave();updateCohortTotals()"/></div>
+                  <div class="sessions-trio-field"><span>ideal</span><input type="number" id="f-sessions-internal-ideal" min="0" placeholder="2" oninput="scheduleAutoSave();updateCohortTotals()"/></div>
+                  <div class="sessions-trio-field"><span>max</span><input type="number" id="f-sessions-internal-max" min="0" placeholder="3" oninput="scheduleAutoSave();updateCohortTotals()"/></div>
+                </div>
+              </div>
+              <div class="cohort-detail-note">Use internal sessions to practice your pacing and catch obvious issues before you're in front of customers. Don't weight their feedback the same as external users. Kongers know the product. Still useful for moderating practice, script timing, and early UX signal.</div>
+
+              <div class="cohort-detail-section">
+                <div class="cohort-detail-section-label">Who to recruit internally <span class="hint" style="font-weight:400;text-transform:none;letter-spacing:0">(pick what fits)</span></div>
+                <p class="hint" style="margin-bottom:8px;line-height:1.55">Your audience type shapes the messaging in Recruit. Pick the one that matches why you're including each person.</p>
+                <div class="chip-row" id="chips-internal" style="margin-bottom:10px">
+                  <button class="crit-chip" onclick="toggleCritChip(this,'internal')" data-val="Fresh eyes: hasn't worked on this product. Good for catching obvious confusion before going external.">Fresh eyes</button>
+                  <button class="crit-chip" onclick="toggleCritChip(this,'internal')" data-val="Adjacent product: knows the platform but not this specific flow. Good proxy for someone learning a new area of Konnect.">Adjacent product</button>
+                  <button class="crit-chip" onclick="toggleCritChip(this,'internal')" data-val="Role match: same role as the people you're building for (e.g. platform engineer, solutions engineer). Closest proxy to the real audience.">Role match (SE, field eng, PM)</button>
+                  <button class="crit-chip" onclick="toggleCritChip(this,'internal')" data-val="Pacing practice: just need someone to run the script with to check timing and moderating flow.">Pacing practice only</button>
+                </div>
+                <p class="hint" style="line-height:1.55">These selections inform the outreach messages in the Recruit tab. Each type gets a different message explaining why their specific perspective is useful.</p>
+              </div>
+            </div>
+
+            <!-- CUSTOMERS DETAIL -->
+            <div class="cohort-detail" id="cdetail-customers" style="display:none">
+              <div class="cohort-detail-hdr">
+                <span class="cohort-detail-name">Kong customers</span>
+                <div class="sessions-trio" style="margin-left:auto">
+                  <div class="sessions-trio-field"><span>min</span><input type="number" id="f-sessions-customers-min" min="0" placeholder="3" oninput="scheduleAutoSave();updateCohortTotals()"/></div>
+                  <div class="sessions-trio-field"><span>ideal</span><input type="number" id="f-sessions-customers-ideal" min="0" placeholder="4" oninput="scheduleAutoSave();updateCohortTotals()"/></div>
+                  <div class="sessions-trio-field"><span>max</span><input type="number" id="f-sessions-customers-max" min="0" placeholder="5" oninput="scheduleAutoSave();updateCohortTotals()"/></div>
+                </div>
+              </div>
+              <div class="cohort-detail-note">Primary source of signal. You need at least 3 before patterns emerge, aim for 5. Reach them through their CSM or Intercom. The Recruit tab has both.</div>
+
+              <div class="cohort-detail-section">
+                <div class="cohort-detail-section-label">Who specifically? <span class="hint" style="font-weight:400;text-transform:none;letter-spacing:0">(pick any that apply)</span></div>
+                <div class="chip-row" id="chips-customers" style="margin-bottom:10px">
+                  <button class="crit-chip" onclick="toggleCritChip(this,'customers')" data-val="Low context: hasn't used this feature before">Fresh eyes</button>
+                  <button class="crit-chip" onclick="toggleCritChip(this,'customers')" data-val="Deep domain expertise: knows this space well">Domain expert</button>
+                  <button class="crit-chip" onclick="toggleCritChip(this,'customers')" data-val="Power user of this product area">Power user</button>
+                  <button class="crit-chip" onclick="toggleCritChip(this,'customers')" data-val="High intent: actively evaluating or adopting this feature">High intent</button>
+                  <button class="crit-chip" onclick="toggleCritChip(this,'customers')" data-val="Specific role match, e.g. platform engineer, API owner">Role match</button>
+                  <button class="crit-chip" onclick="toggleCritChip(this,'customers')" data-val="Enterprise scale or specific plan tier">Enterprise / plan tier</button>
+                </div>
+                <button class="pbar-toggle" onclick="togglePbar('pbar-criteria-customers')">✦ Write criteria with AI</button>
+                <div class="pbar" id="pbar-criteria-customers">
+                  <div class="pbar-label">Describe your ideal participant in plain language</div>
+                  <textarea id="pbar-criteria-customers-input" placeholder="e.g. Platform engineer at a mid-size company, actively onboarding a new team to their API gateway. Low familiarity with our specific UI."></textarea>
+                  <div class="pbar-actions">
+                    <button class="btn sm filled" onclick="genCohortCriteria('customers')">✦ Draft</button>
+                    <span class="pbar-status" id="pbar-criteria-customers-status"></span>
+                  </div>
+                </div>
+                <textarea class="ta" id="f-criteria-customers" placeholder="Criteria will appear here. Edit freely." oninput="scheduleAutoSave()" style="margin-top:8px;min-height:60px"></textarea>
+              </div>
+
+              <div class="cohort-detail-section">
+                <div class="cohort-detail-section-label">Do you need a screener?</div>
+                <p class="hint" style="margin-bottom:8px;line-height:1.5">A screener is a short set of qualifying questions you send before booking. Use one if job title alone won't tell you whether someone fits.</p>
+                <div style="display:flex;gap:6px;margin-bottom:10px">
+                  <button class="screener-yn" id="syn-yes-customers" onclick="setScreenerChoice('customers','yes')">Yes, I need a screener</button>
+                  <button class="screener-yn" id="syn-no-customers" onclick="setScreenerChoice('customers','no')">No, job title is enough</button>
+                </div>
+                <div id="screener-customers-panel" style="display:none">
+                  <button class="pbar-toggle" onclick="togglePbar('pbar-screener-customers')">✦ Draft screener with AI</button>
+                  <div class="pbar" id="pbar-screener-customers">
+                    <div class="pbar-label">What do you need to verify before someone qualifies?</div>
+                    <textarea id="pbar-screener-customers-input" placeholder="e.g. They manage their own API infrastructure, have 3+ engineers, and are actively evaluating options."></textarea>
+                    <div class="pbar-actions">
+                      <button class="btn sm filled" onclick="genCohortScreener('customers')">✦ Draft screener</button>
+                      <span class="pbar-status" id="pbar-screener-customers-status"></span>
+                    </div>
+                  </div>
+                  <textarea class="ta" id="f-screener-customers" placeholder="Screener questions will appear here. Edit freely." oninput="scheduleAutoSave()" style="margin-top:8px;min-height:90px"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <!-- NON-KONG DETAIL -->
+            <div class="cohort-detail cohort-detail-paid" id="cdetail-noncustomers" style="display:none">
+              <div class="cohort-detail-hdr">
+                <span class="cohort-detail-name">Non-Kong customers</span>
+                <span class="cohort-paid-badge">Paid via Respondent</span>
+                <div class="sessions-trio" style="margin-left:auto">
+                  <div class="sessions-trio-field"><span>min</span><input type="number" id="f-sessions-noncustomers-min" min="0" placeholder="1" oninput="scheduleAutoSave();updateCohortTotals()"/></div>
+                  <div class="sessions-trio-field"><span>ideal</span><input type="number" id="f-sessions-noncustomers-ideal" min="0" placeholder="2" oninput="scheduleAutoSave();updateCohortTotals()"/></div>
+                  <div class="sessions-trio-field"><span>max</span><input type="number" id="f-sessions-noncustomers-max" min="0" placeholder="3" oninput="scheduleAutoSave();updateCohortTotals()"/></div>
+                </div>
+              </div>
+              <div class="cohort-detail-note" style="background:#fffbeb;border-left-color:var(--amber)">Shikha needs to sign off before you recruit this cohort. Use it when you need perspective from people who've never used Kong or are on a competitor. A screener is always required.</div>
+
+              <div class="cohort-detail-section">
+                <div class="cohort-detail-section-label">Who specifically? <span class="hint" style="font-weight:400;text-transform:none;letter-spacing:0">(pick any that apply)</span></div>
+                <div class="chip-row" id="chips-noncustomers" style="margin-bottom:10px">
+                  <button class="crit-chip" onclick="toggleCritChip(this,'noncustomers')" data-val="Currently using a competing API gateway (e.g. AWS API Gateway, Apigee)">On a competitor</button>
+                  <button class="crit-chip" onclick="toggleCritChip(this,'noncustomers')" data-val="Has never used Kong in any form">Never used Kong</button>
+                  <button class="crit-chip" onclick="toggleCritChip(this,'noncustomers')" data-val="Actively evaluating API gateway options right now">Actively evaluating</button>
+                  <button class="crit-chip" onclick="toggleCritChip(this,'noncustomers')" data-val="Platform or DevOps engineer who owns the infrastructure">Owns infrastructure</button>
+                  <button class="crit-chip" onclick="toggleCritChip(this,'noncustomers')" data-val="50–500 person company">Mid-size company</button>
+                  <button class="crit-chip" onclick="toggleCritChip(this,'noncustomers')" data-val="Enterprise (500+ employees)">Enterprise</button>
+                </div>
+                <button class="pbar-toggle" onclick="togglePbar('pbar-criteria-noncustomers')">✦ Write criteria with AI</button>
+                <div class="pbar" id="pbar-criteria-noncustomers">
+                  <div class="pbar-label">Describe your ideal participant</div>
+                  <textarea id="pbar-criteria-noncustomers-input" placeholder="e.g. Platform engineer at a 50-500 person company, currently using AWS API Gateway, has never used Kong."></textarea>
+                  <div class="pbar-actions">
+                    <button class="btn sm filled" onclick="genCohortCriteria('noncustomers')">✦ Draft</button>
+                    <span class="pbar-status" id="pbar-criteria-noncustomers-status"></span>
+                  </div>
+                </div>
+                <textarea class="ta" id="f-criteria-noncustomers" placeholder="Criteria will appear here. Edit freely." oninput="scheduleAutoSave()" style="margin-top:8px;min-height:60px"></textarea>
+              </div>
+
+              <div class="cohort-detail-section">
+                <div class="cohort-detail-section-label">Screener <span style="font-size:10px;font-weight:600;color:var(--amber);background:#fef3c7;padding:1px 6px;border-radius:3px;margin-left:4px">required</span></div>
+                <p class="hint" style="margin-bottom:8px;line-height:1.5">Share the screener with Shikha before it goes out. Respondent handles distribution.</p>
+                <button class="pbar-toggle" onclick="togglePbar('pbar-screener-noncustomers')">✦ Draft screener with AI</button>
+                <div class="pbar" id="pbar-screener-noncustomers">
+                  <div class="pbar-label">What do you need to verify?</div>
+                  <textarea id="pbar-screener-noncustomers-input" placeholder="e.g. Confirm they manage API infrastructure, have never used Kong, are at a company with 50+ engineers, and are actively evaluating."></textarea>
+                  <div class="pbar-actions">
+                    <button class="btn sm filled" onclick="genCohortScreener('noncustomers')">✦ Draft screener</button>
+                    <span class="pbar-status" id="pbar-screener-noncustomers-status"></span>
+                  </div>
+                </div>
+                <textarea class="ta" id="f-screener-noncustomers" placeholder="Screener questions will appear here. Edit freely." oninput="scheduleAutoSave()" style="margin-top:8px;min-height:90px"></textarea>
+              </div>
+            </div>
+
+          </div><!-- /detail areas -->
+        </div><!-- /cohorts -->
+
+      </div><!-- /research-design-panel -->
+
+    </div><!-- /page-setup -->
+
+    <!-- ══ RECRUIT ══ -->
+    <div class="page" id="page-recruit" style="padding:0;overflow:hidden;flex-direction:column">
+
+      <!-- Sticky tab bar -->
+      <div style="padding:16px 24px 0;background:var(--page);border-bottom:1px solid var(--border);flex-shrink:0">
+        <div style="display:flex;align-items:center;gap:0;border:1px solid var(--border);border-radius:var(--rsm);background:var(--white);width:fit-content;overflow:hidden;margin-bottom:-1px">
+          <button class="recruit-tab active" id="rtab-source"  onclick="switchRecruitTab('source')">Source</button>
+          <button class="recruit-tab"        id="rtab-message" onclick="switchRecruitTab('message')">Message</button>
+          <button class="recruit-tab"        id="rtab-manage"  onclick="switchRecruitTab('manage')">Manage <span id="manage-count" style="display:none;font-size:10px;background:var(--border-lt);padding:1px 5px;border-radius:8px;margin-left:4px">0</span></button>
         </div>
       </div>
 
-      <div class="panel">
-        <div class="ptitle">
-          All participants
-          <div class="r"><button class="btn sm" onclick="goTo('participants')">+ Add more</button></div>
+      <!-- Scrollable tab content -->
+      <div style="flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:14px" id="recruit-scroll">
+
+      <!-- ══ SOURCE TAB ══ -->
+      <div id="rtab-content-source" style="display:flex;flex-direction:column;gap:14px">
+
+        <div id="source-no-cohorts" class="panel" style="display:none">
+          <p class="hint" style="line-height:1.6">No cohorts selected yet. Go to <button class="link-btn" onclick="goTo('setup')">Setup → Research design</button> to choose who you're talking to first.</p>
         </div>
-        <div id="o-empty" class="hint" style="padding:6px 0">No participants added yet.</div>
-        <table class="tbl" id="o-tbl" style="display:none">
-          <thead><tr><th>Name</th><th>Type</th><th>Status</th><th>Zoom link</th><th></th></tr></thead>
-          <tbody id="o-body"></tbody>
-        </table>
-        <input type="file" id="transcript-upload" accept=".vtt,.txt,.srt,.md,.doc,.docx" style="display:none" onchange="handleTranscriptUpload(event)"/>
-      </div>
-    </div>
+
+        <!-- INTERNAL KONGERS -->
+        <div class="cohort-card" id="csrc-internal" style="display:none">
+          <div class="cohort-card-hdr">
+            <span class="chip c-internal">Internal Kongers</span>
+            <span class="cohort-when">Reach out first. Good for practising your script and catching early issues before going external.</span>
+          </div>
+
+          <div class="source-step">
+            <div class="source-step-num">1</div>
+            <div class="source-step-body">
+              <div class="source-step-title">Find people using Rovo</div>
+              <p class="hint" style="line-height:1.6;margin-bottom:10px">Rovo searches across Confluence and has role, team, and timezone data for everyone at Kong. Copy this prompt, open Rovo directly (not Claude or Cowork), and search. Results are a starting list. Use your judgement.</p>
+              <div class="prompt-card">
+                <div class="prompt-card-text" id="rovo-prompt-text">Building prompt from your project…</div>
+                <div style="display:flex;gap:6px;margin-top:10px">
+                  <button class="btn sm filled" onclick="copyPrompt('rovo')">Copy prompt</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="source-step">
+            <div class="source-step-num">2</div>
+            <div class="source-step-body">
+              <div class="source-step-title">Add them here</div>
+              <p class="hint" style="line-height:1.6;margin-bottom:10px">Once you have names from Rovo, add them below. The audience type you pick (fresh eyes, adjacent product, role match) determines which message template generates for them.</p>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn sm filled" onclick="openAddPanel('internal')">+ Add person</button>
+                <button class="btn sm" onclick="triggerCSVUpload('internal')">+ Upload CSV</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="added-preview-internal" style="display:none;margin-top:4px"></div>
+        </div>
+
+        <!-- KONG CUSTOMERS -->
+        <div class="cohort-card" id="csrc-customers" style="display:none">
+          <div class="cohort-card-hdr">
+            <span class="chip c-external">Kong customers</span>
+            <span class="cohort-when">Reach out in parallel with internals. Enterprise customers take longer so start early. You'll go through their CSM.</span>
+          </div>
+
+          <div class="source-step">
+            <div class="source-step-num">1</div>
+            <div class="source-step-body">
+              <div class="source-step-title">Find engaged orgs using Hex</div>
+              <p class="hint" style="line-height:1.6;margin-bottom:10px">Hex pulls real product usage data so you can find orgs actively using the area you're researching. Follow the steps below, then export and filter your shortlist.</p>
+              <div class="prompt-card">
+                <div class="prompt-card-text" id="hex-prompt-text">Building guidance from your project…</div>
+                <div style="display:flex;gap:6px;margin-top:10px">
+                  <a class="btn sm filled" href="https://app.hex.tech/941dd486-551d-4fd3-812a-20e7c7bf4a42/app/Dynamic-Funnel-Analysis-031rpYfzR1vfSUhEaMMYyn/latest?tab=front-end-engagement---plug-and-play-query" target="_blank">Open Hex →</a>
+                  <button class="btn sm" onclick="copyPrompt('hex')">Copy guidance</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="source-step">
+            <div class="source-step-num">2</div>
+            <div class="source-step-body">
+              <div class="source-step-title">Add the CSMs you'll reach out to</div>
+              <p class="hint" style="line-height:1.6;margin-bottom:10px">The ACCOUNT_OWNER column in Hex gives you the CSM for each org. Add them here. They're who you'll message first to get an intro to the customer. Never ask the CSM to identify which customer is right; you already have that from Hex.</p>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn sm filled" onclick="openAddPanel('customer')">+ Add CSM</button>
+                <button class="btn sm" onclick="triggerCSVUpload('customer')">+ Upload CSV from Hex</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="added-preview-customer" style="display:none;margin-top:4px"></div>
+        </div>
+
+        <!-- NON-KONG -->
+        <div class="cohort-card" id="csrc-noncustomers" style="display:none">
+          <div class="cohort-card-hdr">
+            <span class="chip" style="background:#fef3c7;color:#92400e">Non-Kong customers</span>
+            <span class="cohort-when">Sourced through Respondent. Work with Shikha on the screener. Log confirmed participants here to keep everything in one place.</span>
+          </div>
+          <div class="source-step">
+            <div class="source-step-num">1</div>
+            <div class="source-step-body">
+              <div class="source-step-title">Coordinate with Shikha on Respondent</div>
+              <p class="hint" style="line-height:1.6;margin-bottom:10px">Respondent handles sourcing, screening, and incentives for this cohort. Shikha manages the screener and link. Once participants are confirmed, log them below.</p>
+              <button class="btn sm filled" onclick="openAddPanel('noncustomer')">+ Log confirmed participant</button>
+            </div>
+          </div>
+          <div id="added-preview-noncustomer" style="display:none;margin-top:4px"></div>
+        </div>
+
+        <!-- Shared add panel -->
+        <div id="add-panel" style="display:none" class="panel">
+          <div class="ptitle" id="add-panel-title" style="margin-bottom:12px">Add participant</div>
+          <div class="g2" style="margin-bottom:10px">
+            <div><label class="fl">Full name</label><input class="inp" id="ma-name" placeholder="Jane Doe"/></div>
+            <div><label class="fl">Role / Title</label><input class="inp" id="ma-role" placeholder="Senior Engineer"/></div>
+          </div>
+          <div class="g2" style="margin-bottom:10px">
+            <div><label class="fl">Company / Team</label><input class="inp" id="ma-company" placeholder="Platform team or org name"/></div>
+            <div><label class="fl">Slack / Email</label><input class="inp" id="ma-contact" placeholder="@handle or email"/></div>
+          </div>
+          <div style="margin-bottom:12px" id="audience-field-wrap">
+            <label class="fl">Audience type</label>
+            <div class="hint" style="margin-bottom:6px">This determines which message template loads for them in the Message tab.</div>
+            <select class="sel" id="ma-audience" style="max-width:320px">
+              <option value="internal-fresh">Fresh eyes: hasn't worked on this product (that's the point)</option>
+              <option value="internal-adjacent">Adjacent product: knows the platform, not this specific flow</option>
+              <option value="internal-rolematch">Role match: same role as the people you're building for</option>
+              <option value="se">Solutions engineer: customer-facing, sees how customers evaluate Kong</option>
+              <option value="field-engineer">Field / platform engineer: works across many customer setups</option>
+              <option value="csm">CSM: manages the account, your route to the customer</option>
+              <option value="customer">Customer (direct): you have direct access, no CSM needed</option>
+              <option value="noncustomer">Non-Kong customer via Respondent</option>
+            </select>
+          </div>
+          <input type="hidden" id="ma-cohort"/>
+          <div style="display:flex;gap:8px">
+            <button class="btn filled sm" onclick="confirmManualAdd()">Add</button>
+            <button class="btn sm" onclick="closeAddPanel()">Cancel</button>
+          </div>
+        </div>
+
+        <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="handleCSVUpload2(event)"/>
+        <div class="panel" id="csv-panel" style="display:none">
+          <div class="ptitle" style="margin-bottom:10px">Fill in missing fields</div>
+          <div id="csv-fill-rows"></div>
+          <div style="display:flex;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border-lt)">
+            <button class="btn filled sm" onclick="confirmCSVFill()">Add all</button>
+            <button class="btn sm" onclick="document.getElementById('csv-panel').style.display='none'">Cancel</button>
+          </div>
+        </div>
+
+      </div><!-- /source tab -->
+
+      <!-- ══ MESSAGE TAB ══ -->
+      <div id="rtab-content-message" style="display:none;flex-direction:column;gap:14px">
+
+        <!-- Booking links -->
+        <div class="panel" id="booking-links-panel">
+          <div class="ptitle">Booking links</div>
+          <p class="hint" style="margin-bottom:14px;line-height:1.6">Paste your GCal booking links here before generating outreach. They'll be included in the relevant messages. Set up a separate link per cohort in GCal so you can cap capacity there.</p>
+          <div class="g2">
+            <div>
+              <label class="fl">Kong Champions booking link</label>
+              <input class="inp" id="f-champions-link" placeholder="https://cal.app/…" oninput="scheduleAutoSave()"/>
+              <div class="hint" style="margin-top:4px">Set your cap in GCal. Champions usually respond within the week.</div>
+            </div>
+            <div>
+              <label class="fl">Customer booking link <span style="font-weight:400;color:var(--t3)">(max 2 slots)</span></label>
+              <input class="inp" id="f-customer-link" placeholder="https://cal.app/…" oninput="scheduleAutoSave()"/>
+              <div class="hint" style="margin-top:4px">Enforce the cap in GCal. Include diverse times for timezones.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- No participants state -->
+        <div id="msg-empty" class="panel" style="display:none">
+          <p class="hint">No participants added yet. Go to the <button class="link-btn" onclick="switchRecruitTab('source')">Source tab</button> to add people first.</p>
+        </div>
+
+        <!-- STEP 1: Internal Kongers -->
+        <div class="outreach-step-card" id="ostep-internal" style="display:none">
+          <div class="ostep-hdr">
+            <div class="ostep-num">1</div>
+            <div>
+              <div class="ostep-title">Internal Kongers</div>
+              <div class="ostep-desc">Reach out first. Use these sessions to practice your script, check your pacing, and catch obvious issues before you're in front of customers.</div>
+            </div>
+            <button class="btn sm" onclick="genCohortMessages('internal')" style="margin-left:auto;flex-shrink:0">✦ Generate all</button>
+          </div>
+          <div id="msglist-internal" style="margin-top:12px"></div>
+        </div>
+
+        <!-- STEP 2: Kong Champions -->
+        <div class="outreach-step-card" id="ostep-champions" style="display:none">
+          <div class="ostep-hdr">
+            <div class="ostep-num">2</div>
+            <div>
+              <div class="ostep-title">Kong Champions</div>
+              <div class="ostep-desc">Start this in parallel with internals. Champions are a small pool of engaged customers who volunteer. Fastest external cohort, usually respond within a week. The brief goes to Shikha and she coordinates the request.</div>
+            </div>
+          </div>
+          <div style="margin-top:12px;padding:14px;background:var(--page);border-radius:var(--rsm)">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+              <div>
+                <div style="font-size:13px;font-weight:500;margin-bottom:4px">Brief for Shikha</div>
+                <div class="hint" style="line-height:1.6">A short Slack message to Shikha covering study topic, what participants will do, time commitment, and criteria. No incentive (Champions volunteer). Include the Champions booking link.</div>
+              </div>
+              <div style="display:flex;gap:6px;flex-shrink:0">
+                <button class="btn sm filled" id="champions-gen-btn" onclick="genChampionsBrief()">✦ Generate brief</button>
+              </div>
+            </div>
+            <div id="champions-output" style="display:none;margin-top:12px">
+              <textarea class="msg-ta" id="champions-text" style="min-height:160px"></textarea>
+              <div style="display:flex;gap:6px;margin-top:8px">
+                <button class="btn sm filled" onclick="copyChampions()">Copy</button>
+                <button class="btn sm" onclick="document.getElementById('champions-output').style.display='none'">Dismiss</button>
+              </div>
+            </div>
+            <div id="champions-status" class="hint" style="margin-top:6px"></div>
+          </div>
+        </div>
+
+        <!-- STEP 3: Enterprise customers via CSM -->
+        <div class="outreach-step-card" id="ostep-customers" style="display:none">
+          <div class="ostep-hdr">
+            <div class="ostep-num">3</div>
+            <div>
+              <div class="ostep-title">Enterprise customers via CSM</div>
+              <div class="ostep-desc">You've identified orgs in Hex. Now reach the CSM for each one on Slack. Give them options: intro you to the customer, add you to an upcoming call, or let you reach out directly. Offer to share findings back.</div>
+            </div>
+            <button class="btn sm" onclick="genCohortMessages('customer')" style="margin-left:auto;flex-shrink:0">✦ Generate all CSM messages</button>
+          </div>
+          <div id="msglist-customer" style="margin-top:12px"></div>
+        </div>
+
+        <!-- STEP 4: Large cohort / survey via Intercom -->
+        <div class="outreach-step-card" id="ostep-intercom" style="display:none">
+          <div class="ostep-hdr">
+            <div class="ostep-num">4</div>
+            <div>
+              <div class="ostep-title">Large cohort or survey via Intercom</div>
+              <div class="ostep-desc">For unincentivized studies or surveys reaching customers who don't have a CSM assigned. Get the email reviewed by Shikha before sending. Upload your list to Intercom and send in batches of 50–100.</div>
+            </div>
+          </div>
+          <div style="margin-top:12px;padding:14px;background:var(--page);border-radius:var(--rsm)">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+              <div>
+                <div style="font-size:13px;font-weight:500;margin-bottom:4px">Intercom email</div>
+                <div class="hint" style="line-height:1.6">Generates subject + body. If there's an incentive, a placeholder will be left for Shikha to fill in.</div>
+              </div>
+              <button class="btn sm filled" id="intercom-gen-btn" onclick="genIntercomEmail()" style="flex-shrink:0">✦ Generate email</button>
+            </div>
+            <div id="intercom-output" style="display:none;margin-top:12px">
+              <div style="margin-bottom:8px"><label class="fl">Subject</label><input class="inp" id="intercom-subject"/></div>
+              <textarea class="msg-ta" id="intercom-text" style="min-height:200px"></textarea>
+              <div style="display:flex;gap:6px;margin-top:8px;align-items:center">
+                <button class="btn sm filled" onclick="copyIntercom()">Copy</button>
+                <button class="btn sm" onclick="triggerCSVUpload('survey')">+ Bulk add survey respondents</button>
+              </div>
+            </div>
+            <div id="intercom-status" class="hint" style="margin-top:6px"></div>
+          </div>
+        </div>
+
+        <!-- Non-Kong note -->
+        <div class="outreach-step-card" id="ostep-noncustomer" style="display:none">
+          <div class="ostep-hdr">
+            <div class="ostep-num" style="background:var(--border-lt);color:var(--t3)">–</div>
+            <div>
+              <div class="ostep-title" style="color:var(--t2)">Non-Kong customers</div>
+              <div class="ostep-desc">Messaging for this cohort is handled through Respondent. Log confirmed participants in the Manage tab.</div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /message tab -->
+
+      <!-- ══ MANAGE TAB ══ -->
+      <div id="rtab-content-manage" style="display:none;flex-direction:column;gap:14px">
+
+        <!-- Metrics -->
+        <div class="mrow">
+          <div class="met"><div class="met-l">Total</div><div class="met-v" id="m-total">0</div></div>
+          <div class="met"><div class="met-l">Completed</div><div class="met-v g" id="m-done">0</div></div>
+          <div class="met"><div class="met-l">Scheduled</div><div class="met-v" id="m-sched">0</div></div>
+          <div class="met"><div class="met-l">Needs action</div><div class="met-v r" id="m-pend">0</div></div>
+        </div>
+
+        <div class="panel">
+          <div class="ptitle">
+            Session participants
+            <div class="r">
+              <button class="btn sm" onclick="openAddPanel('internal')">+ Add</button>
+              <button class="btn sm" onclick="triggerCSVUpload('any')">+ CSV</button>
+            </div>
+          </div>
+          <div id="manage-empty" class="hint" style="padding:6px 0">No participants yet. Add people in the Source tab.</div>
+          <table class="tbl" id="manage-tbl" style="display:none">
+            <thead>
+              <tr><th>Name</th><th>Role / Type</th><th>Status</th><th>Session link</th><th></th></tr>
+            </thead>
+            <tbody id="manage-body"></tbody>
+          </table>
+          <input type="file" id="transcript-upload" accept=".vtt,.txt,.srt,.md,.doc,.docx" style="display:none" onchange="handleTranscriptUpload(event)"/>
+        </div>
+
+        <!-- Survey respondents -->
+        <div class="panel" id="survey-panel">
+          <div class="ptitle">
+            Survey respondents
+            <div class="r">
+              <button class="btn sm" onclick="triggerCSVUpload('survey')">+ Bulk upload</button>
+              <button class="btn sm" onclick="openAddPanel('survey')">+ Add one</button>
+            </div>
+          </div>
+          <p class="hint" style="margin-bottom:12px;line-height:1.6">Track who received the Intercom email and whether they responded. Bulk upload from your Intercom export.</p>
+          <div id="survey-empty" class="hint" style="padding:6px 0">No survey respondents yet.</div>
+          <table class="tbl" id="survey-tbl" style="display:none">
+            <thead>
+              <tr><th>Name / Email</th><th>Company</th><th>Status</th><th></th></tr>
+            </thead>
+            <tbody id="survey-body"></tbody>
+          </table>
+        </div>
+
+      </div><!-- /manage tab -->
+
+    </div><!-- /recruit-scroll -->
+    </div><!-- /page-recruit -->
 
     <!-- ══ ANALYSIS ══ -->
     <div class="page" id="page-analysis">
@@ -289,33 +737,11 @@
         <div class="empty-st">
           <div class="ei">🔬</div>
           <div class="el">Create analysis</div>
-          <div class="ed">Add transcripts via the Outreach tab, then click below. Analysis is segmented by participant then by objective. Synthesis is generated automatically below.</div>
+          <div class="ed">Add transcripts via the Recruit tab, then click below. Analysis is segmented by participant then by objective. Synthesis is generated automatically below.</div>
           <button class="btn filled" id="a-btn" onclick="runAnalysis()">Create analysis</button>
         </div>
       </div>
       <div id="a-content" style="display:none;flex-direction:column;gap:16px"></div>
-    </div>
-
-    <!-- ══ FINALIZE ══ -->
-    <div class="page" id="page-finalize">
-      <div class="panel">
-        <div class="ptitle">Create document</div>
-        <p class="hint" style="margin-bottom:20px;line-height:1.7">Generates a formatted research plan document that matches your team's template — with all objectives, participants, and analysis filled in. Opens in a new tab so you can print to PDF.</p>
-
-        <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px">
-          <div class="fr"><div class="fic">📋</div><div class="fb2"><div class="ft2">Research plan &amp; objectives</div><div class="fd2">Project details, purpose, context, and the full learning objectives table.</div></div></div>
-          <div class="fr"><div class="fic">👥</div><div class="fb2"><div class="ft2">Participant recruiting tracker</div><div class="fd2">All participants with contact, company, and participation status.</div></div></div>
-          <div class="fr"><div class="fic">🔬</div><div class="fb2"><div class="ft2">Analysis &amp; synthesis</div><div class="fd2">Included if you ran analysis — findings per participant and cross-interview synthesis.</div></div></div>
-        </div>
-
-        <div style="padding-top:16px;border-top:1px solid var(--border-lt);display:flex;gap:12px;align-items:center">
-          <button class="btn filled" onclick="generateDocument()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-right:6px;vertical-align:-2px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="1.5"/><polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="1.5"/></svg>
-            Create document
-          </button>
-          <button class="btn" onclick="openDrawer()">Preview →</button>
-        </div>
-      </div>
     </div>
 
   </main>
