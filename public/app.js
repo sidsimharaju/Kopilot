@@ -1061,6 +1061,38 @@ function renderSourceTab() {
   restoreBookingLinks();
   renderParticipantMsgList('internal', S.participants.filter(p => p.cohort === 'internal' || p.type === 'internal'));
   renderParticipantMsgList('customer', S.participants.filter(p => p.cohort === 'customer' || (p.type !== 'internal' && p.cohort !== 'noncustomer')));
+  initCollapsibleSteps();
+}
+
+function initCollapsibleSteps() {
+  document.querySelectorAll('.source-step').forEach(step => {
+    if (step.dataset.collapsibleInit) return;
+    step.dataset.collapsibleInit = '1';
+    const body  = step.querySelector('.source-step-body');
+    const title = step.querySelector('.source-step-title');
+    const num   = step.querySelector('.source-step-num');
+    if (!body || !title) return;
+
+    // Add chevron to title row
+    const chev = document.createElement('span');
+    chev.className = 'ss-chevron';
+    chev.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
+    title.appendChild(chev);
+    title.classList.add('ss-title-clickable');
+
+    // Wrap everything after the title in a collapsible container
+    const wrap = document.createElement('div');
+    wrap.className = 'ss-content';
+    Array.from(body.children).filter(c => c !== title).forEach(c => wrap.appendChild(c));
+    body.appendChild(wrap);
+
+    const toggle = () => {
+      const collapsed = step.classList.toggle('ss-collapsed');
+      chev.querySelector('svg').style.transform = collapsed ? 'rotate(-90deg)' : '';
+    };
+    title.addEventListener('click', toggle);
+    if (num) { num.style.cursor = 'pointer'; num.addEventListener('click', toggle); }
+  });
 }
 
 function restoreBookingLinks() {

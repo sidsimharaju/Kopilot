@@ -671,6 +671,14 @@ hr { border: none; border-top: 1px solid var(--border-lt); margin: 4px 0; }
 }
 .source-step-body { flex: 1; }
 .source-step-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.ss-title-clickable {
+  display: flex; align-items: center; cursor: pointer; user-select: none; margin-bottom: 0;
+}
+.ss-title-clickable:hover { color: var(--blue); }
+.ss-chevron { margin-left: auto; color: var(--t3); line-height: 0; flex-shrink: 0; }
+.ss-chevron svg { transition: transform .18s; }
+.ss-content { margin-top: 8px; }
+.source-step.ss-collapsed .ss-content { display: none; }
 
 /* ── PROMPT CARD ── */
 .prompt-card {
