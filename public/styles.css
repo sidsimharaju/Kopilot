@@ -702,6 +702,15 @@ hr { border: none; border-top: 1px solid var(--border-lt); margin: 4px 0; }
   color: var(--t3); margin-bottom: 8px;
 }
 
+/* ── MANAGE ADD COHORT TABS ── */
+.mct {
+  padding: 5px 12px; font-size: 12px; font-weight: 500; color: var(--t2);
+  background: var(--white); border: none; cursor: pointer; font-family: var(--font);
+}
+.mct:not(:last-child) { border-right: 1px solid var(--border); }
+.mct.active { background: var(--text); color: #fff; }
+.mct:hover:not(.active) { background: var(--page); }
+
 /* ── CSM SUB-TABS ── */
 .csm-subtab {
   padding: 5px 14px; font-size: 12px; font-weight: 500; color: var(--t2);

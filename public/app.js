@@ -600,7 +600,7 @@ function toggleQuickstart() {
   _qsOpen = !_qsOpen;
   const content = document.getElementById('qs-content');
   const chevron = document.getElementById('qs-chevron');
-  if (content) content.style.display = _qsOpen ? 'block' : 'none';
+  if (content) content.style.display = _qsOpen ? 'flex' : 'none';
   if (chevron) chevron.style.transform = _qsOpen ? '' : 'rotate(-90deg)';
 }
 
@@ -1121,9 +1121,24 @@ function initCollapsibleSteps() {
     Array.from(body.children).filter(c => c !== title).forEach(c => wrap.appendChild(c));
     body.appendChild(wrap);
 
+    const collapseStep = s => {
+      s.classList.add('ss-collapsed');
+      const c = s.querySelector('.ss-chevron svg'); if (c) c.style.transform = 'rotate(-90deg)';
+    };
+    const expandStep = s => {
+      s.classList.remove('ss-collapsed');
+      const c = s.querySelector('.ss-chevron svg'); if (c) c.style.transform = '';
+    };
     const toggle = () => {
-      const collapsed = step.classList.toggle('ss-collapsed');
-      chev.querySelector('svg').style.transform = collapsed ? 'rotate(-90deg)' : '';
+      const opening = step.classList.contains('ss-collapsed');
+      if (opening) {
+        // Accordion: close all sibling steps in the same card
+        const card = step.closest('.cohort-card');
+        if (card) card.querySelectorAll('.source-step').forEach(s => { if (s !== step) collapseStep(s); });
+        expandStep(step);
+      } else {
+        collapseStep(step);
+      }
     };
     title.addEventListener('click', toggle);
     if (num) { num.style.cursor = 'pointer'; num.addEventListener('click', toggle); }
@@ -1603,6 +1618,57 @@ Return JSON: {"subject":"...","body":"..."}`;
 function copyIntercom() {
   navigator.clipboard.writeText(`Subject: ${document.getElementById('intercom-subject').value}\n\n${document.getElementById('intercom-text').value}`);
   toast('Copied');
+}
+
+// ── Manage tab add form ───────────────────────
+let _manageAddCohort = 'internal';
+function toggleManageAddForm() {
+  const form = document.getElementById('manage-add-form');
+  if (!form) return;
+  const open = form.style.display !== 'none';
+  form.style.display = open ? 'none' : 'block';
+  if (!open) switchManageAddCohort('internal');
+}
+function switchManageAddCohort(cohort) {
+  _manageAddCohort = cohort;
+  ['internal','customer','noncustomer'].forEach(c => {
+    document.getElementById('mct-' + c)?.classList.toggle('active', c === cohort);
+  });
+  document.getElementById('maf-internal-fields').style.display  = cohort === 'internal'  ? 'block' : 'none';
+  document.getElementById('maf-csm-fields').style.display       = cohort === 'customer'   ? 'block' : 'none';
+}
+function submitManageAdd() {
+  const name = document.getElementById('maf-name')?.value.trim();
+  if (!name) { toast('Name required'); return; }
+  const role    = document.getElementById('maf-role')?.value.trim()    || '';
+  const company = document.getElementById('maf-company')?.value.trim() || '';
+  const contact = document.getElementById('maf-contact')?.value.trim() || '';
+  const cohort  = _manageAddCohort;
+  let audience = 'internal-fresh', extra = {};
+  if (cohort === 'internal') {
+    audience = document.getElementById('maf-audience')?.value || 'internal-fresh';
+  } else if (cohort === 'customer') {
+    audience = 'csm';
+    const csmName    = document.getElementById('maf-csm-name')?.value.trim()    || '';
+    const csmContact = document.getElementById('maf-csm-contact')?.value.trim() || '';
+    extra = csmName ? { hasCSM: true, csmName, csmContact } : { hasCSM: false };
+  } else {
+    audience = 'noncustomer';
+    extra = { hasCSM: false };
+  }
+  addP({ name, role, company, contact, cohort, audience, type: cohort === 'internal' ? 'internal' : 'external', ...extra });
+  ['maf-name','maf-role','maf-company','maf-contact','maf-csm-name','maf-csm-contact'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('manage-add-form').style.display = 'none';
+}
+function triggerManageUpload() { document.getElementById('manage-upload-input').click(); }
+function handleManageUpload(e) {
+  const file = e.target.files[0]; if (!file) return;
+  e.target.value = '';
+  const reader = new FileReader();
+  reader.onload = ev => processCSVText(ev.target.result, _manageAddCohort || 'internal');
+  reader.readAsText(file);
 }
 
 // ── STATUS PILL & MANAGE TAB ──────────────────

@@ -560,7 +560,7 @@
           </div>
 
           <!-- With CSM / Without CSM sub-tabs -->
-          <div style="border-top:1px solid var(--border-lt);padding-top:16px;margin-top:4px">
+          <div style="padding-top:4px;margin-top:4px">
             <div style="display:flex;border:1px solid var(--border);border-radius:var(--rsm);width:fit-content;overflow:hidden;margin-bottom:16px">
               <button class="csm-subtab active" id="csmtab-with" onclick="switchCSMTab('with')">With CSM</button>
               <button class="csm-subtab" id="csmtab-without" onclick="switchCSMTab('without')">Without CSM</button>
@@ -678,7 +678,10 @@
               <div class="source-step-title">Coordinate with Shikha on Respondent</div>
               <p class="hint" style="line-height:1.6;margin-bottom:10px">Respondent handles sourcing, screening, and incentives. Shikha manages the screener and link. Once participants are confirmed, log them below.</p>
               <div id="added-preview-noncustomer" style="display:none;margin-bottom:10px"></div>
-              <button class="btn sm filled" onclick="toggleInlineAdd('noncustomer')">+ Log confirmed participant</button>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn sm filled" onclick="toggleInlineAdd('noncustomer')">+ Add participant</button>
+                <button class="btn sm" onclick="triggerCSVUpload('noncustomer')">+ Upload</button>
+              </div>
               <div id="inline-add-noncustomer" class="inline-add-form" style="display:none">
                 <div class="g2" style="margin-bottom:8px">
                   <div><label class="fl">Full name</label><input class="inp" id="ila-name-noncustomer" placeholder="Jane Doe"/></div>
@@ -757,11 +760,49 @@
           <div class="ptitle">
             Session participants
             <div class="r">
-              <button class="btn sm" onclick="openAddPanel('internal')">+ Add</button>
-              <button class="btn sm" onclick="triggerCSVUpload('any')">+ CSV</button>
+              <button class="btn sm filled" onclick="toggleManageAddForm()">+ Add person</button>
+              <button class="btn sm" onclick="triggerManageUpload()">+ Upload</button>
             </div>
           </div>
-          <div id="manage-empty" class="hint" style="padding:6px 0">No participants yet. Add people in the Source tab.</div>
+
+          <!-- Inline add form -->
+          <div id="manage-add-form" style="display:none;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border-lt)">
+            <div style="display:flex;border:1px solid var(--border);border-radius:var(--rsm);width:fit-content;overflow:hidden;margin-bottom:12px">
+              <button class="mct active" id="mct-internal"    onclick="switchManageAddCohort('internal')">Internal Konger</button>
+              <button class="mct"        id="mct-customer"    onclick="switchManageAddCohort('customer')">Kong Customer</button>
+              <button class="mct"        id="mct-noncustomer" onclick="switchManageAddCohort('noncustomer')">Non-Kong</button>
+            </div>
+            <div class="g2" style="margin-bottom:8px">
+              <div><label class="fl">Full name</label><input class="inp" id="maf-name" placeholder="Jane Doe"/></div>
+              <div><label class="fl">Role / Title</label><input class="inp" id="maf-role" placeholder="Platform Engineer"/></div>
+            </div>
+            <div class="g2" style="margin-bottom:8px">
+              <div><label class="fl">Company / Team</label><input class="inp" id="maf-company" placeholder="Acme Corp"/></div>
+              <div><label class="fl">Email / Slack</label><input class="inp" id="maf-contact" placeholder="@handle or email"/></div>
+            </div>
+            <div id="maf-internal-fields" style="margin-bottom:10px">
+              <label class="fl">Audience type</label>
+              <select class="sel" id="maf-audience" style="max-width:320px">
+                <option value="internal-fresh">Fresh eyes — hasn't worked on this product</option>
+                <option value="internal-adjacent">Adjacent product — knows platform, not this flow</option>
+                <option value="internal-rolematch">Role match — same role as the target user</option>
+                <option value="se">Solutions engineer</option>
+                <option value="field-engineer">Field / platform engineer</option>
+              </select>
+            </div>
+            <div id="maf-csm-fields" style="display:none;margin-bottom:10px">
+              <div class="g2">
+                <div><label class="fl">CSM name <span class="hint">(optional)</span></label><input class="inp" id="maf-csm-name" placeholder="Sarah Smith"/></div>
+                <div><label class="fl">CSM Slack / email</label><input class="inp" id="maf-csm-contact" placeholder="@sarah"/></div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn sm filled" onclick="submitManageAdd()">Add</button>
+              <button class="btn sm" onclick="toggleManageAddForm()">Cancel</button>
+            </div>
+          </div>
+
+          <div id="manage-empty" class="hint" style="padding:6px 0">No participants yet. Add people above or in the Recruit tab.</div>
           <table class="tbl" id="manage-tbl" style="display:none">
             <thead>
               <tr><th>Name</th><th>Role / Type</th><th>Status</th><th>Session link</th><th></th></tr>
@@ -769,6 +810,7 @@
             <tbody id="manage-body"></tbody>
           </table>
           <input type="file" id="transcript-upload" accept=".vtt,.txt,.srt,.md,.doc,.docx" style="display:none" onchange="handleTranscriptUpload(event)"/>
+          <input type="file" id="manage-upload-input" accept=".csv,.txt,.md,.xlsx" style="display:none" onchange="handleManageUpload(event)"/>
         </div>
 
       </div><!-- /manage tab -->
