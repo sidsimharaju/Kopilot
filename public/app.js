@@ -604,20 +604,36 @@ function toggleQuickstart() {
   if (chevron) chevron.style.transform = _qsOpen ? '' : 'rotate(-90deg)';
 }
 
-let _supportingDocText = '';
+let _supportingDocs = []; // [{name, text}]
 function triggerSupportingDoc() { document.getElementById('supporting-doc-input').click(); }
 function handleSupportingDoc(e) {
-  const file = e.target.files[0];
+  const files = Array.from(e.target.files);
   e.target.value = '';
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    _supportingDocText = (ev.target.result || '').slice(0, 4000);
-    const el = document.getElementById('supporting-doc-name');
-    if (el) { el.style.display = 'block'; el.textContent = `📎 ${file.name} — will be included when you generate`; }
-    toast('Document attached');
-  };
-  reader.readAsText(file);
+  if (!files.length) return;
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      _supportingDocs.push({ name: file.name, text: (ev.target.result || '').slice(0, 3000) });
+      renderAttachedFiles();
+      toast(`Attached: ${file.name}`);
+    };
+    reader.readAsText(file);
+  });
+}
+function removeAttachedDoc(i) {
+  _supportingDocs.splice(i, 1);
+  renderAttachedFiles();
+}
+function renderAttachedFiles() {
+  const el = document.getElementById('attached-files-list');
+  if (!el) return;
+  el.style.display = _supportingDocs.length ? 'flex' : 'none';
+  el.innerHTML = _supportingDocs.map((doc, i) => `
+    <div class="attached-chip">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+      ${esc(doc.name)}
+      <button class="attached-chip-x" onclick="removeAttachedDoc(${i})">×</button>
+    </div>`).join('');
 }
 
 function triggerDocImport() { document.getElementById('doc-import-input').click(); }
@@ -680,7 +696,7 @@ async function fillWithAI() {
   const prompt = `Extract and generate structured research plan fields from this description. Return ONLY a JSON object — no markdown, no preamble.
 
 Description:
-${input}${_supportingDocText ? `\n\nSupporting document (use for additional context):\n${_supportingDocText}` : ''}
+${input}${_supportingDocs.length ? `\n\nAttached files (use for additional context):\n${_supportingDocs.map(d => `[${d.name}]:\n${d.text}`).join('\n\n')}` : ''}
 
 Return this schema (use empty string "" for anything not determinable):
 {
@@ -884,9 +900,27 @@ function restoreCohorts() {
   updateCohortTotals();
 }
 
+const COHORT_COUNT_DEFAULTS = { internal: '1–3 sessions', customers: '3–5 sessions', noncustomers: '2–3 sessions · paid' };
+
 function updateCohortTotals() {
   let totalIdeal = 0;
   ['internal','customers','noncustomers'].forEach(c => {
+    // Update the card count label dynamically
+    const countEl = document.getElementById('csel-count-' + c);
+    if (countEl) {
+      const min   = document.getElementById('f-sessions-' + c + '-min')?.value   || '';
+      const ideal = document.getElementById('f-sessions-' + c + '-ideal')?.value || '';
+      const max   = document.getElementById('f-sessions-' + c + '-max')?.value   || '';
+      if (min || ideal || max) {
+        const lo = min || ideal || '?';
+        const hi = max || ideal || '?';
+        const suffix = c === 'noncustomers' ? ' · paid' : '';
+        countEl.textContent = lo === hi ? `${lo} sessions${suffix}` : `${lo}–${hi} sessions${suffix}`;
+      } else {
+        countEl.textContent = COHORT_COUNT_DEFAULTS[c] || '';
+      }
+    }
+
     if (!S.cohorts?.[c]) return;
     const v = parseInt(document.getElementById('f-sessions-' + c + '-ideal')?.value) || 0;
     totalIdeal += v;
