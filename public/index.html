@@ -555,62 +555,107 @@
             </div>
           </div>
 
-          <div class="source-step">
-            <div class="source-step-num">2</div>
-            <div class="source-step-body">
-              <div class="source-step-title">Add the CSMs you'll reach out to</div>
-              <p class="hint" style="line-height:1.6;margin-bottom:10px">The ACCOUNT_OWNER column in Hex gives you the CSM for each org. Add them here — they're your first contact. Never ask CSMs to pick the right customer; you already have that from Hex.</p>
-              <div id="added-preview-customer" style="display:none;margin-bottom:10px"></div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button class="btn sm filled" onclick="toggleInlineAdd('customer')">+ Add CSM</button>
-                <button class="btn sm" onclick="triggerCSVUpload('customer')">+ Upload CSV from Hex</button>
+          <!-- With CSM / Without CSM sub-tabs -->
+          <div style="border-top:1px solid var(--border-lt);padding-top:16px;margin-top:4px">
+            <div style="display:flex;border:1px solid var(--border);border-radius:var(--rsm);width:fit-content;overflow:hidden;margin-bottom:16px">
+              <button class="csm-subtab active" id="csmtab-with" onclick="switchCSMTab('with')">With CSM</button>
+              <button class="csm-subtab" id="csmtab-without" onclick="switchCSMTab('without')">Without CSM</button>
+            </div>
+
+            <!-- WITH CSM PANE -->
+            <div id="csm-pane-with">
+              <div class="source-step">
+                <div class="source-step-num">2</div>
+                <div class="source-step-body">
+                  <div class="source-step-title">Add customers &amp; their CSMs</div>
+                  <p class="hint" style="line-height:1.6;margin-bottom:10px">Add each customer you want to reach and attach their CSM. You message the CSM — they intro you. The ACCOUNT_OWNER column in Hex gives you the CSM. Upload a CSV to auto-fill.</p>
+                  <div id="customer-csm-list"></div>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+                    <button class="btn sm filled" onclick="toggleInlineAdd('customer-csm')">+ Add customer</button>
+                    <button class="btn sm" onclick="triggerCSVUpload('customer')">+ Upload CSV from Hex</button>
+                  </div>
+                  <div id="inline-add-customer-csm" class="inline-add-form" style="display:none">
+                    <div class="ila-section-label">Customer</div>
+                    <div class="g2" style="margin-bottom:8px">
+                      <div><label class="fl">Full name</label><input class="inp" id="ila-name-customer-csm" placeholder="Jane Doe"/></div>
+                      <div><label class="fl">Role / Title</label><input class="inp" id="ila-role-customer-csm" placeholder="Platform Engineer"/></div>
+                    </div>
+                    <div class="g2" style="margin-bottom:8px">
+                      <div><label class="fl">Company</label><input class="inp" id="ila-company-customer-csm" placeholder="Acme Corp"/></div>
+                      <div><label class="fl">Email</label><input class="inp" id="ila-contact-customer-csm" placeholder="jane@acme.com"/></div>
+                    </div>
+                    <div class="ila-section-label" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border-lt)">CSM</div>
+                    <div class="g2" style="margin-bottom:10px">
+                      <div><label class="fl">CSM name</label><input class="inp" id="ila-csm-name-customer-csm" placeholder="Sarah Smith"/></div>
+                      <div><label class="fl">CSM Slack / email</label><input class="inp" id="ila-csm-contact-customer-csm" placeholder="@sarah or sarah@konghq.com"/></div>
+                    </div>
+                    <div style="display:flex;gap:8px">
+                      <button class="btn sm filled" onclick="submitInlineAdd('customer-csm')">Add</button>
+                      <button class="btn sm" onclick="toggleInlineAdd('customer-csm')">Cancel</button>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div id="inline-add-customer" class="inline-add-form" style="display:none">
-                <div class="g2" style="margin-bottom:8px">
-                  <div><label class="fl">Full name</label><input class="inp" id="ila-name-customer" placeholder="Jane Doe"/></div>
-                  <div><label class="fl">Role / Title</label><input class="inp" id="ila-role-customer" placeholder="Customer Success Manager"/></div>
-                </div>
-                <div class="g2" style="margin-bottom:8px">
-                  <div><label class="fl">Company / Account</label><input class="inp" id="ila-company-customer" placeholder="Acme Corp"/></div>
-                  <div><label class="fl">Slack / Email</label><input class="inp" id="ila-contact-customer" placeholder="@jane or jane@acme.com"/></div>
-                </div>
-                <input type="hidden" id="ila-audience-customer" value="csm"/>
-                <div style="display:flex;gap:8px">
-                  <button class="btn sm filled" onclick="submitInlineAdd('customer')">Add</button>
-                  <button class="btn sm" onclick="toggleInlineAdd('customer')">Cancel</button>
+
+              <div class="source-step" style="border-bottom:none;padding-bottom:0">
+                <div class="source-step-num">3</div>
+                <div class="source-step-body">
+                  <div class="source-step-title">Draft CSM messages</div>
+                  <p class="hint" style="line-height:1.6;margin-bottom:10px">Message 1 is a short connection request. Message 2 is sent after they respond — full context, options: intro you, add you to a call, or let you reach out directly. Booking link gets embedded.</p>
+                  <div style="margin-bottom:12px">
+                    <label class="fl">Customer booking link <span style="font-weight:400;color:var(--t3)">(set max 2 slots in GCal)</span></label>
+                    <input class="inp" id="f-customer-link" placeholder="https://cal.app/…" style="max-width:340px" oninput="scheduleAutoSave()"/>
+                  </div>
+                  <div id="msglist-customer"></div>
+                  <button class="btn sm" onclick="genCohortMessages('customer')" style="margin-top:8px">✦ Generate all CSM messages</button>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div class="source-step">
-            <div class="source-step-num">3</div>
-            <div class="source-step-body">
-              <div class="source-step-title">Draft CSM messages</div>
-              <p class="hint" style="line-height:1.6;margin-bottom:10px">Message 1 is a short connection request. Message 2 is sent after they respond — full context, options: intro you, add you to a call, or let you reach out directly. Booking link gets embedded.</p>
-              <div style="margin-bottom:12px">
-                <label class="fl">Customer booking link <span style="font-weight:400;color:var(--t3)">(set max 2 slots in GCal)</span></label>
-                <input class="inp" id="f-customer-link" placeholder="https://cal.app/…" style="max-width:340px" oninput="scheduleAutoSave()"/>
+            <!-- WITHOUT CSM PANE -->
+            <div id="csm-pane-without" style="display:none">
+              <div class="source-step">
+                <div class="source-step-num">2</div>
+                <div class="source-step-body">
+                  <div class="source-step-title">Add customers without a CSM</div>
+                  <p class="hint" style="line-height:1.6;margin-bottom:10px">These are customers you'll reach directly via Intercom. Add them here — then generate a single email for all of them below. Get the email reviewed by Shikha before sending.</p>
+                  <div id="customer-nocsm-list"></div>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+                    <button class="btn sm filled" onclick="toggleInlineAdd('customer-nocsm')">+ Add customer</button>
+                  </div>
+                  <div id="inline-add-customer-nocsm" class="inline-add-form" style="display:none">
+                    <div class="g2" style="margin-bottom:8px">
+                      <div><label class="fl">Full name</label><input class="inp" id="ila-name-customer-nocsm" placeholder="Jane Doe"/></div>
+                      <div><label class="fl">Role / Title</label><input class="inp" id="ila-role-customer-nocsm" placeholder="Platform Engineer"/></div>
+                    </div>
+                    <div class="g2" style="margin-bottom:10px">
+                      <div><label class="fl">Company</label><input class="inp" id="ila-company-customer-nocsm" placeholder="Acme Corp"/></div>
+                      <div><label class="fl">Email</label><input class="inp" id="ila-contact-customer-nocsm" placeholder="jane@acme.com"/></div>
+                    </div>
+                    <div style="display:flex;gap:8px">
+                      <button class="btn sm filled" onclick="submitInlineAdd('customer-nocsm')">Add</button>
+                      <button class="btn sm" onclick="toggleInlineAdd('customer-nocsm')">Cancel</button>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div id="msglist-customer"></div>
-              <button class="btn sm" onclick="genCohortMessages('customer')" style="margin-top:8px">✦ Generate all CSM messages</button>
-            </div>
-          </div>
 
-          <div class="source-step" style="border-bottom:none;padding-bottom:0">
-            <div class="source-step-num">4</div>
-            <div class="source-step-body">
-              <div class="source-step-title">Large cohort via Intercom</div>
-              <p class="hint" style="line-height:1.6;margin-bottom:10px">For customers without a CSM, or broader unincentivized outreach. Get the email reviewed by Shikha before sending. Upload to Intercom and send in batches of 50–100.</p>
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-                <button class="btn sm filled" id="intercom-gen-btn" onclick="genIntercomEmail()">✦ Generate email</button>
-                <span id="intercom-status" class="hint"></span>
-              </div>
-              <div id="intercom-output" style="display:none">
-                <div style="margin-bottom:8px"><label class="fl">Subject</label><input class="inp" id="intercom-subject"/></div>
-                <textarea class="msg-ta" id="intercom-text" style="min-height:180px"></textarea>
-                <div style="display:flex;gap:6px;margin-top:8px">
-                  <button class="btn sm filled" onclick="copyIntercom()">Copy</button>
+              <div class="source-step" style="border-bottom:none;padding-bottom:0">
+                <div class="source-step-num">3</div>
+                <div class="source-step-body">
+                  <div class="source-step-title">Generate Intercom email</div>
+                  <p class="hint" style="line-height:1.6;margin-bottom:10px">One email goes out to all customers added above. Upload to Intercom and send in batches of 50–100.</p>
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                    <button class="btn sm filled" id="intercom-gen-btn" onclick="genIntercomEmail()">✦ Generate email</button>
+                    <span id="intercom-status" class="hint"></span>
+                  </div>
+                  <div id="intercom-output" style="display:none">
+                    <div style="margin-bottom:8px"><label class="fl">Subject</label><input class="inp" id="intercom-subject"/></div>
+                    <textarea class="msg-ta" id="intercom-text" style="min-height:180px"></textarea>
+                    <div style="display:flex;gap:6px;margin-top:8px">
+                      <button class="btn sm filled" onclick="copyIntercom()">Copy</button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

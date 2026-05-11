@@ -1057,10 +1057,11 @@ function renderSourceTab() {
   buildRovoPrompt();
   buildHexGuidance();
   renderAddedPreviews();
+  renderCustomerLists();
   // Render per-person message lists inline (booking links live in the source tab now)
   restoreBookingLinks();
   renderParticipantMsgList('internal', S.participants.filter(p => p.cohort === 'internal' || p.type === 'internal'));
-  renderParticipantMsgList('customer', S.participants.filter(p => p.cohort === 'customer' || (p.type !== 'internal' && p.cohort !== 'noncustomer')));
+  renderParticipantMsgList('customer', S.participants.filter(p => p.cohort === 'customer' && p.hasCSM !== false));
   initCollapsibleSteps();
 }
 
@@ -1131,13 +1132,22 @@ function copyPrompt(type) {
 }
 
 // ── Inline add form ───────────────────────────
+function switchCSMTab(tab) {
+  ['with','without'].forEach(t => {
+    const pane = document.getElementById('csm-pane-' + t);
+    const btn  = document.getElementById('csmtab-' + t);
+    if (pane) pane.style.display = t === tab ? 'block' : 'none';
+    if (btn)  btn.classList.toggle('active', t === tab);
+  });
+}
+
 function toggleInlineAdd(cohort) {
   const form = document.getElementById('inline-add-' + cohort);
   if (!form) return;
   const visible = form.style.display !== 'none';
   form.style.display = visible ? 'none' : 'block';
   if (!visible) {
-    ['ila-name-','ila-role-','ila-company-','ila-contact-'].forEach(prefix => {
+    ['ila-name-','ila-role-','ila-company-','ila-contact-','ila-csm-name-','ila-csm-contact-'].forEach(prefix => {
       const el = document.getElementById(prefix + cohort); if (el) el.value = '';
     });
   }
@@ -1150,9 +1160,62 @@ function submitInlineAdd(cohort) {
   const company = document.getElementById('ila-company-' + cohort)?.value.trim() || '';
   const contact = document.getElementById('ila-contact-' + cohort)?.value.trim() || '';
   const audEl   = document.getElementById('ila-audience-' + cohort);
-  const audience = audEl ? audEl.value : (cohort === 'internal' ? 'internal-fresh' : 'csm');
-  addP({ name, role, company, contact, cohort: cohort === 'customer-csm' ? 'customer' : cohort, audience, type: cohort === 'internal' ? 'internal' : 'external' });
+  const audience = audEl ? audEl.value : (cohort === 'internal' ? 'internal-fresh' : cohort === 'customer-csm' ? 'csm' : cohort === 'customer-nocsm' ? 'customer' : 'csm');
+
+  let extra = {};
+  if (cohort === 'customer-csm') {
+    extra = {
+      hasCSM:     true,
+      csmName:    document.getElementById('ila-csm-name-customer-csm')?.value.trim() || '',
+      csmContact: document.getElementById('ila-csm-contact-customer-csm')?.value.trim() || '',
+    };
+  } else if (cohort === 'customer-nocsm') {
+    extra = { hasCSM: false };
+  }
+
+  const realCohort = (cohort === 'customer-csm' || cohort === 'customer-nocsm') ? 'customer' : cohort;
+  addP({ name, role, company, contact, cohort: realCohort, audience, type: cohort === 'internal' ? 'internal' : 'external', ...extra });
   toggleInlineAdd(cohort);
+}
+
+function renderCustomerLists() {
+  // With-CSM entries
+  const csmEl = document.getElementById('customer-csm-list');
+  if (csmEl) {
+    const ps = S.participants.filter(p => p.cohort === 'customer' && p.hasCSM !== false);
+    csmEl.innerHTML = ps.length ? ps.map(p => `
+      <div class="customer-entry">
+        <div class="pav ce-av">${initials(p.name)}</div>
+        <div class="ce-info">
+          <div class="ce-name">${esc(p.name)}</div>
+          <div class="ce-meta">${[p.role, p.company].filter(Boolean).map(esc).join(' · ')}</div>
+          ${p.contact ? `<div class="ce-email">${esc(p.contact)}</div>` : ''}
+          ${p.csmName ? `<div class="ce-csm-row"><span class="ce-csm-label">CSM</span>${esc(p.csmName)}${p.csmContact ? ' · <span style="color:var(--t3)">' + esc(p.csmContact) + '</span>' : ''}</div>` : ''}
+        </div>
+        <div class="ce-actions">
+          <span class="spill" style="background:${STATUS_PILL[p.status]?.bg};color:${STATUS_PILL[p.status]?.color}">${STATUS_PILL[p.status]?.label||''}</span>
+          <button class="btn xs" style="color:var(--red);border-color:#fca5a5" onclick="removeP(${p.id})">×</button>
+        </div>
+      </div>`).join('') : '';
+  }
+  // Without-CSM entries
+  const nocsmEl = document.getElementById('customer-nocsm-list');
+  if (nocsmEl) {
+    const ps = S.participants.filter(p => p.cohort === 'customer' && p.hasCSM === false);
+    nocsmEl.innerHTML = ps.length ? ps.map(p => `
+      <div class="customer-entry">
+        <div class="pav ce-av">${initials(p.name)}</div>
+        <div class="ce-info">
+          <div class="ce-name">${esc(p.name)}</div>
+          <div class="ce-meta">${[p.role, p.company].filter(Boolean).map(esc).join(' · ')}</div>
+          ${p.contact ? `<div class="ce-email">${esc(p.contact)}</div>` : ''}
+        </div>
+        <div class="ce-actions">
+          <span class="spill" style="background:${STATUS_PILL[p.status]?.bg};color:${STATUS_PILL[p.status]?.color}">${STATUS_PILL[p.status]?.label||''}</span>
+          <button class="btn xs" style="color:var(--red);border-color:#fca5a5" onclick="removeP(${p.id})">×</button>
+        </div>
+      </div>`).join('') : '';
+  }
 }
 
 function renderAddedPreviews() {
@@ -1350,7 +1413,9 @@ function renderSurveyTable() {
 function renderInlineMsgLists() {
   const ps = S.participants;
   renderParticipantMsgList('internal', ps.filter(p => p.cohort === 'internal' || p.type === 'internal'));
-  renderParticipantMsgList('customer', ps.filter(p => p.cohort === 'customer' || (p.type !== 'internal' && p.cohort !== 'noncustomer')));
+  // Only CSM-linked customers go through message drafting; no-CSM ones use Intercom email
+  renderParticipantMsgList('customer', ps.filter(p => p.cohort === 'customer' && p.hasCSM !== false));
+  renderCustomerLists();
 }
 
 function renderMessageTab() { renderInlineMsgLists(); }
