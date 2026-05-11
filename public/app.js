@@ -594,6 +594,65 @@ async function callAgentText(prompt, options = {}) {
   return data.content?.find(b => b.type === 'text')?.text || '';
 }
 
+// ── Quickstart ─────────────────────────────────
+let _qsOpen = true;
+function toggleQuickstart() {
+  _qsOpen = !_qsOpen;
+  const content = document.getElementById('qs-content');
+  const chevron = document.getElementById('qs-chevron');
+  if (content) content.style.display = _qsOpen ? 'block' : 'none';
+  if (chevron) chevron.style.transform = _qsOpen ? '' : 'rotate(-90deg)';
+}
+
+let _supportingDocText = '';
+function triggerSupportingDoc() { document.getElementById('supporting-doc-input').click(); }
+function handleSupportingDoc(e) {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    _supportingDocText = (ev.target.result || '').slice(0, 4000);
+    const el = document.getElementById('supporting-doc-name');
+    if (el) { el.style.display = 'block'; el.textContent = `📎 ${file.name} — will be included when you generate`; }
+    toast('Document attached');
+  };
+  reader.readAsText(file);
+}
+
+function triggerDocImport() { document.getElementById('doc-import-input').click(); }
+function handleDocImport(e) {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  const status = document.getElementById('import-status');
+  if (status) { status.textContent = 'Reading…'; status.style.color = 'var(--t2)'; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const text = (ev.target.result || '').slice(0, 4000);
+    const ta = document.getElementById('ai-input');
+    if (ta) ta.value = text;
+    if (status) { status.textContent = '✓ Loaded — click "Generate plan" to fill fields'; status.style.color = 'var(--green)'; }
+    // Auto-open quickstart if collapsed
+    if (!_qsOpen) toggleQuickstart();
+  };
+  reader.readAsText(file);
+}
+
+// ── Export document ────────────────────────────
+function exportDocument() {
+  renderDocPreview();
+  const content = document.getElementById('docprev')?.innerText || 'No document generated yet.';
+  const name = (S.projectName || 'research-plan').replace(/[^a-z0-9]/gi, '-').toLowerCase();
+  const blob = new Blob([content], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${name}.txt`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('Document exported');
+}
+
 // ── AI fill (setup page) ───────────────────────
 async function fillWithAI() {
   const input = document.getElementById('ai-input').value.trim();
@@ -608,7 +667,7 @@ async function fillWithAI() {
   const prompt = `Extract and generate structured research plan fields from this description. Return ONLY a JSON object — no markdown, no preamble.
 
 Description:
-${input}
+${input}${_supportingDocText ? `\n\nSupporting document (use for additional context):\n${_supportingDocText}` : ''}
 
 Return this schema (use empty string "" for anything not determinable):
 {
@@ -658,7 +717,7 @@ Generate 2–4 well-prioritised learning objectives (Must/Should/Could) from the
   }
 
   btn.disabled = false;
-  btn.textContent = '✦ Generate fields';
+  btn.textContent = '✦ Generate plan';
 }
 
 // ── Setup ─────────────────────────────────────

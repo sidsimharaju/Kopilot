@@ -773,6 +773,46 @@ hr { border: none; border-top: 1px solid var(--border-lt); margin: 4px 0; }
 .ai-btn { background: var(--blue) !important; border-color: var(--blue) !important; color: #fff !important; }
 .ai-btn:hover { background: #1d4ed8 !important; border-color: #1d4ed8 !important; }
 
+/* ── ICON TOOLTIPS ── */
+.ib.tip { position: relative; }
+.ib.tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e293b;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 400;
+  padding: 4px 8px;
+  border-radius: 5px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s;
+  z-index: 200;
+}
+.ib.tip::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #1e293b;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s;
+  z-index: 200;
+}
+.ib.tip:hover::after, .ib.tip:hover::before { opacity: 1; }
+
+/* ── QUICKSTART ── */
+.qs-banner { border-color: #bfdbfe; background: #eff6ff; }
+.qs-hdr { display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 2px 0; user-select: none; }
+.qs-hdr:hover { opacity: .85; }
+
 /* ── COHORT DETAIL TABS (Setup) ── */
 .cd-tabstrip { display: flex; gap: 0; border: 1px solid var(--border); border-radius: var(--rsm); background: var(--white); width: fit-content; overflow: hidden; }
 .cd-tab { padding: 5px 14px; font-size: 12px; font-weight: 500; color: var(--t2); background: transparent; border: none; cursor: pointer; border-right: 1px solid var(--border); white-space: nowrap; transition: background .15s; }
