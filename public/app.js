@@ -362,15 +362,43 @@ async function openProject(id) {
   showCockpit();
 }
 
+// ── Confirmation modal ────────────────────────
+let _confirmCb = null;
+function showConfirm(msg, onConfirm) {
+  _confirmCb = onConfirm;
+  document.getElementById('confirm-msg').textContent = msg;
+  document.getElementById('confirm-overlay').classList.add('open');
+  document.getElementById('confirm-modal').classList.add('open');
+}
+function doConfirm() {
+  closeConfirm();
+  if (_confirmCb) _confirmCb();
+}
+function cancelConfirm() { closeConfirm(); }
+function closeConfirm() {
+  document.getElementById('confirm-overlay').classList.remove('open');
+  document.getElementById('confirm-modal').classList.remove('open');
+  _confirmCb = null;
+}
+function confirmRemoveP(id) {
+  const p = S.participants.find(p => p.id === id);
+  showConfirm(`Remove ${p?.name || 'this participant'}? This cannot be undone.`, () => removeP(id));
+}
+function confirmRemoveSurveyP(id) {
+  const p = (S.surveyParticipants || []).find(p => p.id === id);
+  showConfirm(`Remove ${p?.name || 'this participant'}?`, () => removeSurveyP(id));
+}
+
 async function deleteProject(id) {
-  if (!confirm('Delete this project? This cannot be undone.')) return;
-  try {
-    await apiFetch(`/api/projects/${id}`, { method: 'DELETE' });
-    toast('Project deleted');
-    await renderDirectory();
-  } catch (e) {
-    toast('Delete failed: ' + e.message);
-  }
+  showConfirm('Delete this project? This cannot be undone.', async () => {
+    try {
+      await apiFetch(`/api/projects/${id}`, { method: 'DELETE' });
+      toast('Project deleted');
+      await renderDirectory();
+    } catch (e) {
+      toast('Delete failed: ' + e.message);
+    }
+  });
 }
 
 function toggleCardMenu(id) {
@@ -420,7 +448,6 @@ async function newProject() {
     const d = document.getElementById('cdetail-' + c);
     if (d) d.style.display = 'none';
   });
-  addObjRow({ priority: 'Must' });
   updateRecruitBadge();
 
   await saveStateAsync();
@@ -1143,6 +1170,16 @@ function initCollapsibleSteps() {
     title.addEventListener('click', toggle);
     if (num) { num.style.cursor = 'pointer'; num.addEventListener('click', toggle); }
   });
+
+  // Default: only first step in each card starts expanded
+  document.querySelectorAll('.cohort-card').forEach(card => {
+    Array.from(card.querySelectorAll('.source-step')).forEach((s, i) => {
+      if (i > 0) {
+        s.classList.add('ss-collapsed');
+        const c = s.querySelector('.ss-chevron svg'); if (c) c.style.transform = 'rotate(-90deg)';
+      }
+    });
+  });
 }
 
 function restoreBookingLinks() {
@@ -1243,7 +1280,7 @@ function renderCustomerLists() {
         </div>
         <div class="ce-actions">
           <span class="spill" style="background:${STATUS_PILL[p.status]?.bg};color:${STATUS_PILL[p.status]?.color}">${STATUS_PILL[p.status]?.label||''}</span>
-          <button class="btn xs" style="color:var(--red);border-color:#fca5a5" onclick="removeP(${p.id})">×</button>
+          <button class="btn xs" style="color:var(--red);border-color:#fca5a5" onclick="confirmRemoveP(${p.id})">×</button>
         </div>
       </div>`).join('') : '';
   }
@@ -1261,7 +1298,7 @@ function renderCustomerLists() {
         </div>
         <div class="ce-actions">
           <span class="spill" style="background:${STATUS_PILL[p.status]?.bg};color:${STATUS_PILL[p.status]?.color}">${STATUS_PILL[p.status]?.label||''}</span>
-          <button class="btn xs" style="color:var(--red);border-color:#fca5a5" onclick="removeP(${p.id})">×</button>
+          <button class="btn xs" style="color:var(--red);border-color:#fca5a5" onclick="confirmRemoveP(${p.id})">×</button>
         </div>
       </div>`).join('') : '';
   }
@@ -1453,7 +1490,7 @@ function renderSurveyTable() {
       <td><div class="cp">${esc(p.name || p.contact || '')}</div><div class="cs">${esc(p.contact || '')}</div></td>
       <td><div class="cs">${esc(p.company || '')}</div></td>
       <td><div class="spill-wrap"><span class="spill" style="background:${s.bg};color:${s.color}">${s.label}</span><select class="spill-sel" onchange="setSurveyStatus(${p.id},this.value)">${Object.entries(SURVEY_STATUS).map(([v,d])=>`<option value="${v}" ${p.status===v?'selected':''}>${d.label}</option>`).join('')}</select></div></td>
-      <td style="text-align:right"><button class="btn xs" style="color:var(--red);border-color:#fca5a5" onclick="removeSurveyP(${p.id})">×</button></td>
+      <td style="text-align:right"><button class="btn xs" style="color:var(--red);border-color:#fca5a5" onclick="confirmRemoveSurveyP(${p.id})">×</button></td>
     </tr>`;
   }).join('');
 }
@@ -1472,37 +1509,50 @@ function renderMessageTab() { renderInlineMsgLists(); }
 function renderParticipantMsgList(cohort, participants) {
   const el = document.getElementById('msglist-' + cohort); if (!el) return;
   if (!participants.length) {
-    el.innerHTML = `<div class="hint" style="padding:6px 0">No ${cohort === 'internal' ? 'internal Konger' : 'CSM / customer'} participants added yet. Go to the Source tab.</div>`;
+    el.innerHTML = `<div class="hint" style="padding:6px 0">No participants added yet.</div>`;
     return;
   }
-  el.innerHTML = participants.map(p => `
+  const isInternal = cohort === 'internal';
+  el.innerHTML = participants.map(p => {
+    const toLine = isInternal
+      ? `<span class="msg-to-label">Slack → ${esc(p.name)}</span>`
+      : p.csmName
+        ? `<span class="msg-to-label">Slack → <strong>${esc(p.csmName)}</strong>${p.csmContact ? ' <span style="color:var(--t3)">' + esc(p.csmContact) + '</span>' : ''}</span>`
+        : `<span class="msg-to-label">Direct Slack</span>`;
+    const audienceSel = isInternal ? `
+      <select class="sel" style="font-size:11px;padding:3px 6px;max-width:200px" onchange="setAudience(${p.id},this.value)">
+        ${Object.entries(AUDIENCE_LABELS).filter(([v]) => v.startsWith('internal') || v === 'se' || v === 'field-engineer').map(([v,l])=>`<option value="${v}" ${p.audience===v?'selected':''}>${l}</option>`).join('')}
+      </select>` : '';
+    return `
     <div class="participant-msg-card" id="msgcard-${p.id}">
       <div class="pmc-hdr">
         <div class="pav" style="width:24px;height:24px;font-size:9px;flex-shrink:0">${initials(p.name)}</div>
-        <div><div class="pmc-name">${esc(p.name)}</div><div class="pmc-role">${esc(p.role||'')}${p.company?' · '+esc(p.company):''}</div></div>
-        <div style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <select class="sel" style="max-width:230px;font-size:11px;padding:3px 6px" onchange="setAudience(${p.id},this.value)">
-            ${Object.entries(AUDIENCE_LABELS).map(([v,l])=>`<option value="${v}" ${p.audience===v?'selected':''}>${l}</option>`).join('')}
-          </select>
+        <div style="flex:1;min-width:0">
+          <div class="pmc-name">${esc(p.name)}</div>
+          <div class="pmc-role">${esc(p.role||'')}${p.company?' · '+esc(p.company):''}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap">
+          ${audienceSel}
           <button class="btn sm" onclick="genParticipantMessages(${p.id})">✦ Draft</button>
         </div>
       </div>
+      ${toLine}
       ${p.msg1 ? `
-        <div class="msg-block"><div class="msg-block-label">Message 1: short ask, send first</div><textarea class="msg-ta" onchange="saveMsg(${p.id},'msg1',this.value)">${esc(p.msg1)}</textarea></div>
-        <div class="msg-block"><div class="msg-block-label">Message 2: full context, send after they respond</div><textarea class="msg-ta" style="min-height:110px" onchange="saveMsg(${p.id},'msg2',this.value)">${esc(p.msg2)}</textarea></div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn xs filled" onclick="copyBothMessages(${p.id})">Copy both</button>
+        <textarea class="msg-ta" style="margin-top:6px" onchange="saveMsg(${p.id},'msg1',this.value)">${esc(p.msg1)}</textarea>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+          <button class="btn xs filled" onclick="copyMessage(${p.id})">Copy</button>
           <button class="btn xs" onclick="setStatus(${p.id},'contacted');renderManageTab();toast('Marked as Contacted')">Mark contacted →</button>
-        </div>` : `<div class="hint" style="font-size:11px;margin-top:4px">Select audience type above then click Draft.</div>`}
-    </div>`).join('');
+        </div>` : `<div class="hint" style="font-size:11px;margin-top:6px">Click Draft to generate the Slack message.</div>`}
+    </div>`;
+  }).join('');
 }
 
 function setAudience(id, val) { const p = S.participants.find(p => p.id === id); if (p) { p.audience = val; saveState(); } }
 function saveMsg(id, field, val) { const p = S.participants.find(p => p.id === id); if (p) { p[field] = val; saveState(); } }
-function copyBothMessages(id) {
+function copyMessage(id) {
   const p = S.participants.find(p => p.id === id); if (!p) return;
-  navigator.clipboard.writeText(`MESSAGE 1, send first\n${p.msg1}\n\n---\n\nMESSAGE 2, send after they respond\n${p.msg2}\n\nMake this sound like you. change anything that feels stiff.`);
-  toast('Both messages copied');
+  navigator.clipboard.writeText(p.msg1 || '');
+  toast('Copied');
 }
 
 async function genParticipantMessages(id) {
@@ -1513,39 +1563,50 @@ async function genParticipantMessages(id) {
   const audType = p.audience || 'internal-fresh';
   const topic = S.objectives.filter(o => o.objective).map(o => o.objective).join('; ') || S.purpose || 'research study';
   const guide = S.methodology === 'usability' ? 'moderated usability test' : S.methodology === 'discovery' ? 'discovery interview' : 'research session';
-  const bookingLink = audType === 'csm' && S.customerLink ? S.customerLink : '';
-  const whyYou = {
-    'internal-fresh':    "MUST say they haven't worked on this product and that's the whole point. Without this they'll say 'I don't work on that.'",
-    'internal-adjacent': "Say they know the platform but not this specific flow. That middle-ground is exactly the perspective you need.",
-    'internal-rolematch':"Say they are exactly the role you're building for.",
-    'se':                "About their customer-facing role. They see how customers evaluate and adopt Kong.",
-    'field-engineer':    "About breadth: they work across many customer setups and that range is the value.",
-    'csm':               "Message 1 is a CONNECTION REQUEST only: who you are, the org name, connection ask. NO study details. Message 2: study topic, why that org fits, 30-min session, offer options: intro you, add you to a call, or let you reach out directly.",
-    'customer':          "Warm and direct. Clear time commitment, no prep needed, honest reactions are the point.",
-    'noncustomer':       "Brief, specific about why they fit.",
+  const isCSMMsg = p.cohort === 'customer' && p.hasCSM !== false;
+  const bookingLink = isCSMMsg && S.customerLink ? S.customerLink : !isCSMMsg && S.championsLink ? S.championsLink : '';
+  const whyInternal = {
+    'internal-fresh':    "Hasn't worked on this product — that's the point. Mention this so they don't say 'I don't work on that.'",
+    'internal-adjacent': "Knows the platform but not this specific flow. That middle-ground perspective is exactly what you need.",
+    'internal-rolematch':"Same role as the people you're building for. Their experience is directly relevant.",
+    'se':                "Customer-facing — they see how real customers evaluate and adopt Kong.",
+    'field-engineer':    "Works across many customer setups. That breadth is what makes them valuable here.",
   };
-  const prompt = `Draft two recruiting messages. Follow all rules.
+  const prompt = isCSMMsg
+    ? `Write a single Slack message from a researcher to a CSM at Kong asking them to connect the researcher with a customer.
 
 RULES:
-1. Both messages always. Msg 1: short ask, 3-4 sentences, one ask, why-you line, NO study details. Msg 2: full context, sent after they say yes.
-2. Why-you line is mandatory and specific, never generic.
-3. Write like a colleague on Slack: warm, direct, short sentences, no em dashes, no corporate language.
-4. End msg 2 with: "Make this sound like you. change anything that feels stiff."
+- One message only. 3-4 sentences max.
+- Casual Slack tone: warm, direct, no corporate language, no em dashes.
+- Include: who you are (Shikha, design team at Kong), the customer name + company you want to talk to, a ~30-min research session ask about ${S.area || 'the product'}, and a simple connection ask.
+- End with something like "No prep needed for them" or "happy to follow their lead on format."
+${bookingLink ? '- Optionally include this booking link: ' + bookingLink : ''}
 
-AUDIENCE: ${audType}, ${AUDIENCE_LABELS[audType] || audType}
-WHY-YOU: ${whyYou[audType] || 'Be specific.'}
-PARTICIPANT: ${p.name}${p.role ? ', ' + p.role : ''}${p.company ? ' at ' + p.company : ''}
-PROJECT: ${S.projectName || 'research study'}, ${S.area || 'our product'}
-STUDY: ${guide}
+RESEARCHER: Shikha, design team at Kong
+CSM: ${p.csmName || 'the CSM'}${p.csmContact ? ' (' + p.csmContact + ')' : ''}
+CUSTOMER: ${p.name}${p.role ? ', ' + p.role : ''}${p.company ? ' at ' + p.company : ''}
 TOPIC: ${topic}
-FROM: Shikha, design team at Kong
-${bookingLink ? 'BOOKING LINK (append to msg 2 or msg 1 if CSM): ' + bookingLink : ''}
+PROJECT: ${S.projectName || 'research study'}
 
-Return ONLY valid JSON: {"msg1":"...","msg2":"..."}`;
+Return ONLY valid JSON: {"msg1":"..."}`
+    : `Write a single Slack message from a researcher to a colleague at Kong asking them to participate in a research session.
+
+RULES:
+- One message only. 3-4 sentences max.
+- Casual Slack tone: warm, direct, short sentences, no em dashes.
+- Include: who you are, why SPECIFICALLY this person (${whyInternal[audType] || 'their specific background matters'}), a ~30-min ${guide} ask, and a simple yes/no.
+
+RESEARCHER: Shikha, design team at Kong
+PARTICIPANT: ${p.name}${p.role ? ', ' + p.role : ''}
+TOPIC: ${topic}
+PROJECT: ${S.projectName || 'research study'}, ${S.area || 'our product'}
+${bookingLink ? 'BOOKING LINK: ' + bookingLink : ''}
+
+Return ONLY valid JSON: {"msg1":"..."}`;
 
   try {
-    const data = await callAgent(prompt, { max_tokens: 900 });
-    p.msg1 = data.msg1 || ''; p.msg2 = data.msg2 || '';
+    const data = await callAgent(prompt, { max_tokens: 400 });
+    p.msg1 = data.msg1 || '';
     saveState();
     const isCohortInternal = p.cohort === 'internal' || p.type === 'internal';
     renderParticipantMsgList(isCohortInternal ? 'internal' : 'customer', S.participants.filter(x => isCohortInternal ? (x.cohort === 'internal' || x.type === 'internal') : (x.cohort === 'customer' || (x.type !== 'internal' && x.cohort !== 'noncustomer'))));
@@ -1711,7 +1772,7 @@ function renderManageTab() {
       <td><input class="iinp" value="${esc(p.sessionLink||'')}" placeholder="Session link" onchange="setZoom(${p.id},this.value)" style="width:130px"/></td>
       <td style="text-align:right;white-space:nowrap">
         <button class="btn xs ${hasT?'transcript-done':'filled'}" onclick="triggerTranscriptUpload(${p.id})">${hasT?'✓ Transcript':'+ Transcript'}</button>
-        <button class="btn xs" style="color:var(--red);border-color:#fca5a5;margin-left:4px" onclick="removeP(${p.id})">×</button>
+        <button class="btn xs" style="color:var(--red);border-color:#fca5a5;margin-left:4px" onclick="confirmRemoveP(${p.id})">×</button>
       </td>
     </tr>`;
   }).join('');
