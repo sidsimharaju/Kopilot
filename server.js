@@ -14,6 +14,7 @@ app.set('trust proxy', 1); // trust Cloud Run's TLS termination proxy
 const ALLOWED_EMAILS = new Set([
   'shikha.sharma@konghq.com',
   'sid.simharaju@konghq.com',
+  'ally.christensen@konghq.com',
 ]);
 
 const BASE_URL = process.env.BASE_URL || 'https://research-cockpit-116402097360.us-central1.run.app';
