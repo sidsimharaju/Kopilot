@@ -211,6 +211,33 @@ app.delete('/api/projects/:id', async (req, res) => {
 });
 
 // ════════════════════════════════════════════════════════════
+// SKILLS ENDPOINT
+// ════════════════════════════════════════════════════════════
+
+const fs = require('fs');
+const SKILLS_DIR = path.join(__dirname, 'skills');
+const ALLOWED_SKILLS = new Set([
+  'synthesize-discovery-interview',
+  'synthesize-usability-test',
+  'research-summary-report',
+  'research-full-report',
+]);
+
+app.get('/api/skills/:name', (req, res) => {
+  const name = req.params.name;
+  if (!ALLOWED_SKILLS.has(name)) return res.status(404).json({ error: 'Skill not found' });
+  const filePath = path.join(SKILLS_DIR, `${name}.md`);
+  try {
+    const raw = fs.readFileSync(filePath, 'utf8');
+    // Strip YAML frontmatter
+    const content = raw.replace(/^---[\s\S]*?---\n?/, '').trim();
+    res.json({ name, content });
+  } catch {
+    res.status(404).json({ error: 'Skill not found' });
+  }
+});
+
+// ════════════════════════════════════════════════════════════
 // AGENT ENDPOINT — OpenAI
 // ════════════════════════════════════════════════════════════
 

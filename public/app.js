@@ -1842,6 +1842,7 @@ function updateAnalysisBtn() {
   if (ed) ed.textContent = hasTranscripts
     ? 'Click below to generate analysis from your transcripts.'
     : 'You need at least one completed interview with a transcript uploaded before running analysis.';
+  updateAnalysisReportsPanel();
 }
 
 async function runAnalysis() {
@@ -1899,11 +1900,117 @@ Return the full JSON structure.`;
   }
 }
 
+// ── Report generation ──────────────────────────────────────
+
+let _lastReportMarkdown = '';
+
+function updateAnalysisReportsPanel() {
+  const hasTranscripts = S.participants.some(p => p.status === 'completed' && p.transcript);
+  const panel = document.getElementById('a-reports');
+  if (panel) panel.style.display = hasTranscripts ? 'block' : 'none';
+}
+
+async function generateReport(type) {
+  const hasTranscripts = S.participants.some(p => p.status === 'completed' && p.transcript);
+  if (!hasTranscripts) { toast('Upload at least one transcript first'); return; }
+
+  const skillName = type === 'full' ? 'research-full-report' : 'research-summary-report';
+  const label = type === 'full' ? 'Full report' : 'Summary report';
+
+  const summaryBtn = document.getElementById('rpt-summary-btn');
+  const fullBtn = document.getElementById('rpt-full-btn');
+  const activeBtn = type === 'full' ? fullBtn : summaryBtn;
+  if (activeBtn) { activeBtn.textContent = 'Generating…'; activeBtn.disabled = true; }
+  if (summaryBtn) summaryBtn.disabled = true;
+  if (fullBtn) fullBtn.disabled = true;
+
+  try {
+    // Fetch the skill prompt
+    const skillRes = await apiFetch(`/api/skills/${skillName}`);
+    const skillData = await skillRes.json();
+    if (!skillRes.ok) throw new Error(skillData.error || 'Could not load skill');
+    const skillPrompt = skillData.content;
+
+    // Build research context
+    const TRANSCRIPT_CHAR_LIMIT = 6000;
+    const completed = S.participants.filter(p => p.status === 'completed');
+    const participantData = completed.map(p => {
+      const raw = p.transcript || '';
+      const truncated = raw.length > TRANSCRIPT_CHAR_LIMIT
+        ? raw.slice(0, TRANSCRIPT_CHAR_LIMIT) + '\n[transcript truncated]'
+        : raw;
+      return `PARTICIPANT: ${p.name}${p.role ? ' — ' + p.role : ''}${p.company ? ', ' + p.company : ''}\n${truncated}`;
+    }).join('\n\n---\n\n');
+
+    const objList = S.objectives.filter(o => o.objective)
+      .map((o, i) => `${i + 1}. [${o.priority}] ${o.objective}`)
+      .join('\n') || '(none specified)';
+
+    const methodology = S.methodology === 'usability' ? 'Moderated usability test' : 'Discovery interviews';
+
+    const userMsg = `Generate the report for this study.
+
+PROJECT: ${S.projectName || 'User research study'}
+DATE: ${S.date || ''}
+PRODUCT AREA: ${S.area || ''}
+RESEARCHER: ${(S.researcher || []).join(', ') || ''}
+DESIGNER: ${(S.designer || []).join(', ') || ''}
+METHODOLOGY: ${methodology}
+PURPOSE: ${S.purpose || ''}
+CONTEXT: ${S.context || ''}
+
+LEARNING OBJECTIVES:
+${objList}
+
+PARTICIPANTS (${completed.length}):
+${participantData}
+
+Output the full report in markdown.`;
+
+    const res = await apiFetch('/api/agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system: skillPrompt,
+        messages: [{ role: 'user', content: userMsg }],
+        max_tokens: 4000,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'Agent error');
+    const markdown = data.content?.find(b => b.type === 'text')?.text || '';
+
+    _lastReportMarkdown = markdown;
+
+    const outputEl = document.getElementById('rpt-output');
+    const labelEl = document.getElementById('rpt-output-label');
+    const bodyEl = document.getElementById('rpt-body');
+    if (labelEl) labelEl.textContent = label;
+    if (bodyEl) bodyEl.innerHTML = typeof marked !== 'undefined' ? marked.parse(markdown) : `<pre>${esc(markdown)}</pre>`;
+    if (outputEl) outputEl.style.display = 'block';
+    outputEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    toast(`${label} ready`);
+  } catch (e) {
+    toast('Report failed: ' + e.message);
+    console.error(e);
+  } finally {
+    if (summaryBtn) { summaryBtn.textContent = '✦ Summary report'; summaryBtn.disabled = false; }
+    if (fullBtn) { fullBtn.textContent = '✦ Full report'; fullBtn.disabled = false; }
+  }
+}
+
+function copyReport() {
+  if (!_lastReportMarkdown) return;
+  navigator.clipboard.writeText(_lastReportMarkdown);
+  toast('Copied');
+}
+
 function renderAnalysis(data) {
   document.getElementById('a-empty').style.display = 'none';
   const out = document.getElementById('a-content');
   out.style.display = 'flex';
   out.innerHTML = '';
+  updateAnalysisReportsPanel();
 
   const participants = data.participants || S.analysisResult?.participants || [];
   const syn = data.synthesis || S.synthesisResult;

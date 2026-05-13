@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
 
@@ -829,6 +830,22 @@
         </div>
       </div>
       <div id="a-content" style="display:none;flex-direction:column;gap:16px"></div>
+
+      <!-- Report generation panel — always visible once there are transcripts -->
+      <div class="panel" id="a-reports" style="display:none">
+        <div class="ptitle" style="margin-bottom:12px">Generate report</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" id="rpt-summary-btn" onclick="generateReport('summary')">✦ Summary report</button>
+          <button class="btn" id="rpt-full-btn" onclick="generateReport('full')">✦ Full report</button>
+        </div>
+        <div id="rpt-output" style="display:none;margin-top:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div id="rpt-output-label" style="font-size:12px;font-weight:600;color:var(--t2)"></div>
+            <button class="btn sm" onclick="copyReport()">Copy markdown</button>
+          </div>
+          <div class="rpt-body" id="rpt-body"></div>
+        </div>
+      </div>
     </div>
 
   </main>
