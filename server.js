@@ -121,7 +121,7 @@ app.get('/auth/google/callback', async (req, res) => {
       return res.status(403).send(`
         <html><body style="font-family:sans-serif;padding:40px">
           <h2>Access Denied</h2>
-          <p><strong>${user.email}</strong> is not authorized to access Research Cockpit.</p>
+          <p><strong>${user.email}</strong> is not authorized to access Kopilot.</p>
           <p><a href="/auth/google">Try a different account</a></p>
         </body></html>
       `);
@@ -288,5 +288,5 @@ app.get('*', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`\nResearch Cockpit running at http://localhost:${PORT}\n`);
+  console.log(`\nKopilot running at http://localhost:${PORT}\n`);
 });

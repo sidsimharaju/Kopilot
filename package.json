@@ -1,7 +1,7 @@
 {
-  "name": "research-cockpit",
+  "name": "kopilot",
   "version": "1.0.0",
-  "description": "Research project management cockpit with Google Drive, Atlassian, and Claude AI integration",
+  "description": "Kopilot — Kong UX Research",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
