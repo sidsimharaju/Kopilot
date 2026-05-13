@@ -343,7 +343,9 @@ async function openProject(id) {
       if (p.status === 'pending')       migrated.status = 'identified';
       if (p.status === 'outreach-sent') migrated.status = 'contacted';
       if (p.status === 'declined')      migrated.status = 'dropped';
-      if (!migrated.sessionLink) migrated.sessionLink = migrated.zoomLink || '';
+      if (!migrated.sessionLink)    migrated.sessionLink    = migrated.zoomLink || '';
+      if (!migrated.sessionPassword) migrated.sessionPassword = '';
+      if (!migrated.sessionDoc)     migrated.sessionDoc     = '';
       if (!migrated.cohort)   migrated.cohort   = migrated.type === 'internal' ? 'internal' : 'customer';
       if (!migrated.audience) migrated.audience = migrated.type === 'internal' ? 'internal-fresh' : 'csm';
       if (!migrated.msg1)     migrated.msg1 = '';
@@ -1183,10 +1185,8 @@ function initCollapsibleSteps() {
 }
 
 function restoreBookingLinks() {
-  const cl = document.getElementById('f-champions-link');
   const kl = document.getElementById('f-customer-link');
-  if (cl) cl.value = S.championsLink || '';
-  if (kl) kl.value = S.customerLink  || '';
+  if (kl) kl.value = S.customerLink || '';
 }
 
 function switchSourceCohort(cohort) {
@@ -1430,6 +1430,8 @@ function addP(p) {
   p.id = pid++;
   p.status = 'identified';
   p.sessionLink = '';
+  p.sessionPassword = '';
+  p.sessionDoc = '';
   p.transcript = '';
   p.msg1 = '';
   p.msg2 = '';
@@ -1509,7 +1511,11 @@ function renderMessageTab() { renderInlineMsgLists(); }
 function renderParticipantMsgList(cohort, participants) {
   const el = document.getElementById('msglist-' + cohort); if (!el) return;
   if (!participants.length) {
-    el.innerHTML = `<div class="hint" style="padding:6px 0">No participants added yet.</div>`;
+    el.innerHTML = `
+      <div class="hint" style="padding:6px 0 10px">No participants added yet.</div>
+      <div id="sample-msg-area-${cohort}">
+        <button class="btn sm" onclick="genSampleMessage('${cohort}')">✦ Generate sample message</button>
+      </div>`;
     return;
   }
   const isInternal = cohort === 'internal';
@@ -1564,7 +1570,7 @@ async function genParticipantMessages(id) {
   const topic = S.objectives.filter(o => o.objective).map(o => o.objective).join('; ') || S.purpose || 'research study';
   const guide = S.methodology === 'usability' ? 'moderated usability test' : S.methodology === 'discovery' ? 'discovery interview' : 'research session';
   const isCSMMsg = p.cohort === 'customer' && p.hasCSM !== false;
-  const bookingLink = isCSMMsg && S.customerLink ? S.customerLink : !isCSMMsg && S.championsLink ? S.championsLink : '';
+  const bookingLink = isCSMMsg && S.customerLink ? S.customerLink : '';
   const whyInternal = {
     'internal-fresh':    "Hasn't worked on this product — that's the point. Mention this so they don't say 'I don't work on that.'",
     'internal-adjacent': "Knows the platform but not this specific flow. That middle-ground perspective is exactly what you need.",
@@ -1600,7 +1606,6 @@ RESEARCHER: Shikha, design team at Kong
 PARTICIPANT: ${p.name}${p.role ? ', ' + p.role : ''}
 TOPIC: ${topic}
 PROJECT: ${S.projectName || 'research study'}, ${S.area || 'our product'}
-${bookingLink ? 'BOOKING LINK: ' + bookingLink : ''}
 
 Return ONLY valid JSON: {"msg1":"..."}`;
 
@@ -1621,6 +1626,34 @@ async function genCohortMessages(cohort) {
     : S.participants.filter(p => p.cohort === 'customer' || (p.type !== 'internal' && p.cohort !== 'noncustomer'));
   if (!ps.length) { toast('No participants in this cohort yet'); return; }
   for (const p of ps) await genParticipantMessages(p.id);
+}
+
+async function genSampleMessage(cohort) {
+  const area = document.getElementById('sample-msg-area-' + cohort);
+  if (!area) return;
+  const btn = area.querySelector('button');
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+
+  const topic = S.objectives.filter(o => o.objective).map(o => o.objective).join('; ') || S.purpose || 'research study';
+  const guide = S.methodology === 'usability' ? 'moderated usability test' : S.methodology === 'discovery' ? 'discovery interview' : 'research session';
+  const isCSM = cohort === 'customer';
+  const prompt = isCSM
+    ? `Write a sample Slack message from a researcher (Shikha, design team at Kong) to a CSM, asking them to connect her with a customer for a ~30-min research session. Leave placeholders like [Customer Name] and [Company]. Casual Slack tone, 3-4 sentences. Topic: ${topic}. Return plain text only.`
+    : `Write a sample Slack message from a researcher (Shikha, design team at Kong) to a colleague asking them to join a ~30-min ${guide}. Leave a placeholder for the person's name. Mention why their perspective matters. Casual Slack tone, 3-4 sentences. Topic: ${topic}. Return plain text only.`;
+
+  try {
+    const text = await callAgentText(prompt, { max_tokens: 300 });
+    if (area) area.innerHTML = `
+      <div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Sample message</div>
+      <div class="msg-ta" style="white-space:pre-wrap;min-height:unset;padding:10px 12px;background:var(--page);border-radius:var(--rsm);font-size:13px;line-height:1.6;border:1px solid var(--border)">${esc(text)}</div>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button class="btn xs filled" onclick="navigator.clipboard.writeText(${JSON.stringify(text)});toast('Copied')">Copy</button>
+        <button class="btn xs" onclick="genSampleMessage('${cohort}')">Regenerate</button>
+      </div>`;
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = '✦ Generate sample message'; }
+    toast('Failed: ' + e.message);
+  }
 }
 
 // ── Champions brief ───────────────────────────
@@ -1752,7 +1785,8 @@ function setStatus(id, val) {
   saveState();
 }
 
-function setZoom(id, val) { const p = S.participants.find(p => p.id === id); if (p) { p.sessionLink = val; saveState(); } }
+function setSessionField(id, field, val) { const p = S.participants.find(p => p.id === id); if (p) { p[field] = val; saveState(); } }
+function setZoom(id, val) { setSessionField(id, 'sessionLink', val); }
 
 function renderManageTab() {
   const tbl   = document.getElementById('manage-tbl');
@@ -1769,7 +1803,9 @@ function renderManageTab() {
       <td><div class="cp">${esc(p.name)}</div><div class="cs">${esc(p.contact||'')}</div></td>
       <td><div class="cs">${esc(p.role||'')}${p.company?' · '+esc(p.company):''}</div><span class="audience-tag">${esc(AUDIENCE_LABELS[p.audience]||'')}</span></td>
       <td>${statusPill(p.id, p.status)}</td>
-      <td><input class="iinp" value="${esc(p.sessionLink||'')}" placeholder="Session link" onchange="setZoom(${p.id},this.value)" style="width:130px"/></td>
+      <td><input class="iinp" value="${esc(p.sessionLink||'')}" placeholder="https://zoom.us/j/…" onchange="setSessionField(${p.id},'sessionLink',this.value)" style="width:140px"/></td>
+      <td><input class="iinp" value="${esc(p.sessionPassword||'')}" placeholder="Password" onchange="setSessionField(${p.id},'sessionPassword',this.value)" style="width:90px"/></td>
+      <td><input class="iinp" value="${esc(p.sessionDoc||'')}" placeholder="Doc / guide link" onchange="setSessionField(${p.id},'sessionDoc',this.value)" style="width:140px"/></td>
       <td style="text-align:right;white-space:nowrap">
         <button class="btn xs ${hasT?'transcript-done':'filled'}" onclick="triggerTranscriptUpload(${p.id})">${hasT?'✓ Transcript':'+ Transcript'}</button>
         <button class="btn xs" style="color:var(--red);border-color:#fca5a5;margin-left:4px" onclick="confirmRemoveP(${p.id})">×</button>

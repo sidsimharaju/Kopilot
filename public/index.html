@@ -104,7 +104,7 @@
       <span class="nav-icon">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       </span>
-      <span class="nav-label">Recruit</span>
+      <span class="nav-label">Conduct</span>
       <span class="nbadge" id="nb-recruit" style="display:none">0</span>
       <div class="ndot"></div>
     </div>
@@ -314,14 +314,14 @@
 
               <div class="cohort-detail-section">
                 <div class="cohort-detail-section-label">Who to recruit internally <span class="hint" style="font-weight:400;text-transform:none;letter-spacing:0">(pick what fits)</span></div>
-                <p class="hint" style="margin-bottom:8px;line-height:1.55">Your audience type shapes the messaging in Recruit. Pick the one that matches why you're including each person.</p>
+                <p class="hint" style="margin-bottom:8px;line-height:1.55">Your audience type shapes the messaging in Conduct. Pick the one that matches why you're including each person.</p>
                 <div class="chip-row" id="chips-internal" style="margin-bottom:10px">
                   <button class="crit-chip" onclick="toggleCritChip(this,'internal')" data-val="Fresh eyes: hasn't worked on this product. Good for catching obvious confusion before going external.">Fresh eyes</button>
                   <button class="crit-chip" onclick="toggleCritChip(this,'internal')" data-val="Adjacent product: knows the platform but not this specific flow. Good proxy for someone learning a new area of Konnect.">Adjacent product</button>
                   <button class="crit-chip" onclick="toggleCritChip(this,'internal')" data-val="Role match: same role as the people you're building for (e.g. platform engineer, solutions engineer). Closest proxy to the real audience.">Role match (SE, field eng, PM)</button>
                   <button class="crit-chip" onclick="toggleCritChip(this,'internal')" data-val="Pacing practice: just need someone to run the script with to check timing and moderating flow.">Pacing practice only</button>
                 </div>
-                <p class="hint" style="line-height:1.55">These selections inform the outreach messages in the Recruit tab. Each type gets a different message explaining why their specific perspective is useful.</p>
+                <p class="hint" style="line-height:1.55">These selections inform the outreach messages in the Conduct tab. Each type gets a different message explaining why their specific perspective is useful.</p>
               </div>
             </div>
 
@@ -445,7 +445,7 @@
       <!-- Sticky tab bar -->
       <div style="padding:16px 24px 0;background:var(--page);border-bottom:1px solid var(--border);flex-shrink:0">
         <div style="display:flex;align-items:center;gap:0;border:1px solid var(--border);border-radius:var(--rsm);background:var(--white);width:fit-content;overflow:hidden;margin-bottom:-1px">
-          <button class="recruit-tab active" id="rtab-source"  onclick="switchRecruitTab('source')">Recruit</button>
+          <button class="recruit-tab active" id="rtab-source"  onclick="switchRecruitTab('source')">Conduct</button>
           <button class="recruit-tab"        id="rtab-manage"  onclick="switchRecruitTab('manage')">Manage <span id="manage-count" style="display:none;font-size:10px;background:var(--border-lt);padding:1px 5px;border-radius:8px;margin-left:4px">0</span></button>
         </div>
       </div>
@@ -526,12 +526,7 @@
             <div class="source-step-num">3</div>
             <div class="source-step-body">
               <div class="source-step-title">Draft messages</div>
-              <p class="hint" style="line-height:1.6;margin-bottom:10px">Each person gets two messages tailored to their audience type. Paste your booking link and it gets embedded automatically.</p>
-              <div style="margin-bottom:12px">
-                <label class="fl">Booking link</label>
-                <input class="inp" id="f-champions-link" placeholder="https://cal.app/…" style="max-width:340px" oninput="scheduleAutoSave()"/>
-                <div class="hint" style="margin-top:3px">Set capacity in GCal. Embeds into each message.</div>
-              </div>
+              <p class="hint" style="line-height:1.6;margin-bottom:10px">Each person gets a Slack message tailored to their audience type. Add participants above, then draft or generate all at once.</p>
               <div id="msglist-internal"></div>
               <button class="btn sm" onclick="genCohortMessages('internal')" style="margin-top:8px">✦ Generate all</button>
             </div>
@@ -803,10 +798,10 @@
             </div>
           </div>
 
-          <div id="manage-empty" class="hint" style="padding:6px 0">No participants yet. Add people above or in the Recruit tab.</div>
+          <div id="manage-empty" class="hint" style="padding:6px 0">No participants yet. Add people above or in the Conduct tab.</div>
           <table class="tbl" id="manage-tbl" style="display:none">
             <thead>
-              <tr><th>Name</th><th>Role / Type</th><th>Status</th><th>Session link</th><th></th></tr>
+              <tr><th>Name</th><th>Role / Type</th><th>Status</th><th>Zoom link</th><th>Password</th><th>Doc link</th><th></th></tr>
             </thead>
             <tbody id="manage-body"></tbody>
           </table>
@@ -825,7 +820,7 @@
         <div class="empty-st">
           <div class="ei">🔬</div>
           <div class="el">Create analysis</div>
-          <div class="ed">Add transcripts via the Recruit tab, then click below. Analysis is segmented by participant then by objective. Synthesis is generated automatically below.</div>
+          <div class="ed">Add transcripts via the Conduct tab, then click below. Analysis is segmented by participant then by objective. Synthesis is generated automatically below.</div>
           <button class="btn filled" id="a-btn" onclick="runAnalysis()">Create analysis</button>
         </div>
       </div>
