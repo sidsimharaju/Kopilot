@@ -79,10 +79,43 @@ export type ProjectState = {
   objectives?: Objective[];
   participants?: Participant[];
   surveyParticipants?: SurveyParticipant[];
-  analysisResult?: unknown;
-  synthesisResult?: unknown;
+  analysisResult?: AnalysisResult | null;
+  synthesisResult?: Synthesis | null;
   synthesisRich?: string;
   [k: string]: unknown;
+};
+
+export type FindingConfidence = "high" | "medium" | "low";
+
+export type ObjectiveFinding = {
+  objective: string;
+  finding: string;
+  confidence?: FindingConfidence;
+  quotes?: string[];
+};
+
+export type ParticipantAnalysis = {
+  name?: string;
+  role?: string;
+  byObjective?: ObjectiveFinding[];
+};
+
+export type AnalysisResult = {
+  participants?: ParticipantAnalysis[];
+};
+
+export type SynthesisTheme = {
+  name?: string;
+  description?: string;
+  participants?: string;
+};
+
+export type Synthesis = {
+  tldr?: string;
+  themes?: SynthesisTheme[];
+  topPainPoints?: string[];
+  recommendations?: string[];
+  openQuestions?: string[];
 };
 
 export type Project = {

@@ -1,0 +1,188 @@
+import type {
+  AnalysisResult,
+  ObjectiveFinding,
+  ParticipantAnalysis,
+  Project,
+  Synthesis,
+} from "./types";
+
+const TRANSCRIPT_CHAR_LIMIT = 5000;
+
+const AGENT_SYSTEM = `You are a research operations assistant.
+
+Always respond with valid JSON only — no markdown fences, no preamble.
+
+Response schemas:
+- Analysis: {"participants":[{"name":"","role":"","byObjective":[{"objective":"","finding":"2-3 sentence narrative","confidence":"high|medium|low","quotes":[""]}]}],"synthesis":{"tldr":"","themes":[{"name":"","description":"","participants":""}],"topPainPoints":[""],"recommendations":[""],"openQuestions":[""]}}`;
+
+export function buildAnalysisPrompt(project: Project): string {
+  const S = project.S;
+  const completed = (S.participants ?? []).filter((p) => p.status === "completed");
+  const participantData =
+    completed.length === 0
+      ? "No completed interviews. Return {\"participants\":[],\"synthesis\":null}."
+      : completed
+          .map((p) => {
+            const raw = p.transcript || "No transcript provided.";
+            const truncated =
+              raw.length > TRANSCRIPT_CHAR_LIMIT
+                ? raw.slice(0, TRANSCRIPT_CHAR_LIMIT) + "\n[transcript truncated for length]"
+                : raw;
+            return `PARTICIPANT: ${p.name} (${p.role}${p.company ? " at " + p.company : ""})\nTRANSCRIPT:\n${truncated}`;
+          })
+          .join("\n\n---\n\n");
+
+  const validObjectives = (S.objectives ?? []).filter((o) => o.objective);
+  const objList =
+    validObjectives.length === 0
+      ? "1. [Must] Understand pain points in the user workflow"
+      : validObjectives
+          .map((o, i) => `${i + 1}. [${o.priority ?? "Must"}] ${o.objective}`)
+          .join("\n");
+
+  const objCount = validObjectives.length || 1;
+
+  return `Analyze these research interviews. For each participant, map their findings to EVERY learning objective listed below — even if the participant didn't speak directly about an objective, infer what you can from their transcript or write "Not directly addressed in this interview." for that objective. Never skip an objective. The byObjective array MUST contain exactly ${objCount} entries per participant, in the SAME ORDER as the objectives below.
+
+For each objective entry, write a detailed, in-depth finding (2-3 sentences) specific to that objective: what this person does or experiences, the tension or key insight, and why it matters. Include 1-2 verbatim quotes that best support the finding when possible.
+
+Also write a cross-interview synthesis.
+
+PROJECT: ${S.projectName || "User research study"}
+PURPOSE: ${S.purpose || "Understanding user needs"}
+
+LEARNING OBJECTIVES (return one finding per objective per participant, in this order):
+${objList}
+
+INTERVIEWS:
+${participantData}
+
+Return the full JSON structure.`;
+}
+
+export async function runAnalysis(
+  project: Project,
+): Promise<{ analysis: AnalysisResult; synthesis: Synthesis | null }> {
+  const prompt = buildAnalysisPrompt(project);
+  const res = await fetch("/api/agent", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      system: AGENT_SYSTEM,
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 4000,
+    }),
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Agent error: ${errText}`);
+  }
+  const data = (await res.json()) as {
+    content?: Array<{ type: string; text?: string }>;
+  };
+  const text = data.content?.find((b) => b.type === "text")?.text || "";
+  let parsed: { participants?: ParticipantAnalysis[]; synthesis?: Synthesis | null };
+  try {
+    parsed = JSON.parse(text.replace(/```json|```/g, "").trim()) as typeof parsed;
+  } catch {
+    throw new Error("Could not parse analysis JSON");
+  }
+
+  const canonicalObjectives = (project.S.objectives ?? [])
+    .filter((o) => o.objective)
+    .map((o) => o.objective as string);
+
+  const participants: ParticipantAnalysis[] = (parsed.participants ?? []).map((pu) => {
+    const existing = Array.isArray(pu.byObjective) ? pu.byObjective : [];
+    const aligned: ObjectiveFinding[] = canonicalObjectives.map((objText, i) => {
+      const match =
+        existing.find((e) => (e?.objective || "").trim() === objText.trim()) ||
+        existing[i] ||
+        null;
+      return match
+        ? { ...match, objective: objText }
+        : { objective: objText, finding: "", confidence: "medium", quotes: [] };
+    });
+    return { ...pu, byObjective: aligned };
+  });
+
+  return {
+    analysis: { participants },
+    synthesis: parsed.synthesis ?? null,
+  };
+}
+
+export async function generateReport(
+  type: "summary" | "full",
+  project: Project,
+): Promise<string> {
+  const skillName =
+    type === "full" ? "research-full-report" : "research-summary-report";
+  const skillRes = await fetch(`/api/skills/${skillName}`);
+  if (!skillRes.ok) throw new Error("Could not load report skill");
+  const { content: skillPrompt } = (await skillRes.json()) as {
+    content: string;
+  };
+
+  const S = project.S;
+  const TRANSCRIPT_LIMIT = 6000;
+  const completed = (S.participants ?? []).filter((p) => p.status === "completed");
+  const participantData = completed
+    .map((p) => {
+      const raw = p.transcript || "";
+      const truncated =
+        raw.length > TRANSCRIPT_LIMIT
+          ? raw.slice(0, TRANSCRIPT_LIMIT) + "\n[truncated]"
+          : raw;
+      return `PARTICIPANT: ${p.name} (${p.role}${p.company ? " at " + p.company : ""})\nTRANSCRIPT:\n${truncated}`;
+    })
+    .join("\n\n---\n\n");
+
+  const objList = (S.objectives ?? [])
+    .filter((o) => o.objective)
+    .map((o, i) => `${i + 1}. [${o.priority ?? "Must"}] ${o.objective}`)
+    .join("\n");
+
+  const analysisJson =
+    S.analysisResult || S.synthesisResult
+      ? JSON.stringify(
+          { participants: S.analysisResult?.participants ?? [], synthesis: S.synthesisResult },
+          null,
+          2,
+        )
+      : "(no prior analysis)";
+
+  const userPrompt = `${skillPrompt}
+
+PROJECT: ${S.projectName || "Untitled"}
+PURPOSE: ${S.purpose || ""}
+LEARNING OBJECTIVES:
+${objList || "(none)"}
+
+PRIOR ANALYSIS:
+${analysisJson}
+
+INTERVIEWS:
+${participantData || "(none)"}
+
+Write the report in markdown.`;
+
+  const res = await fetch("/api/agent", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      system:
+        "You are a research operations assistant. Return clear, well-structured markdown.",
+      messages: [{ role: "user", content: userPrompt }],
+      max_tokens: type === "full" ? 4000 : 2000,
+    }),
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Report generation failed: ${errText}`);
+  }
+  const data = (await res.json()) as {
+    content?: Array<{ type: string; text?: string }>;
+  };
+  return data.content?.find((b) => b.type === "text")?.text || "";
+}

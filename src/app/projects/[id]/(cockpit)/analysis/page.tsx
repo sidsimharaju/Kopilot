@@ -1,19 +1,12 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { notFound } from "next/navigation";
+import { AnalysisEditor } from "@/components/analysis/analysis-editor";
+import { getProject } from "@/lib/projects";
 
-export default function AnalysisPage() {
-  return (
-    <div className="flex flex-col gap-3.5">
-      <Card>
-        <CardHeader>
-          <CardTitle>Analysis</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Analysis tab ports in Phase 8: per-participant findings cards,
-            synthesis, and report generation.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
-  );
+type Props = { params: Promise<{ id: string }> };
+
+export default async function AnalysisPage({ params }: Props) {
+  const { id } = await params;
+  const project = await getProject(id);
+  if (!project) notFound();
+  return <AnalysisEditor initial={project} />;
 }
