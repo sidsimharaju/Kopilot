@@ -1,19 +1,12 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { notFound } from "next/navigation";
+import { ConductEditor } from "@/components/conduct/conduct-editor";
+import { getProject } from "@/lib/projects";
 
-export default function ConductPage() {
-  return (
-    <div className="flex flex-col gap-3.5">
-      <Card>
-        <CardHeader>
-          <CardTitle>Conduct</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Conduct tab ports in Phase 7: per-cohort source cards and Manage
-            session table.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
-  );
+type Props = { params: Promise<{ id: string }> };
+
+export default async function ConductPage({ params }: Props) {
+  const { id } = await params;
+  const project = await getProject(id);
+  if (!project) notFound();
+  return <ConductEditor initial={project} />;
 }

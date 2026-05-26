@@ -2,18 +2,37 @@ export type SessionRange = { min?: string; ideal?: string; max?: string };
 
 export type Cohort = "internal" | "customers" | "noncustomers";
 
+export type ParticipantStatus =
+  | "identified"
+  | "contacted"
+  | "scheduled"
+  | "completed"
+  | "dropped"
+  | "no-show";
+
+export type ParticipantCohort = "internal" | "customer" | "noncustomer";
+
 export type Participant = {
   id?: number;
-  cohort?: Cohort;
+  cohort?: ParticipantCohort;
+  type?: "internal" | "external";
   audience?: string;
   name?: string;
-  email?: string;
+  role?: string;
   company?: string;
-  notes?: string;
-  status?: string;
+  contact?: string;
+  hasCSM?: boolean;
+  csmName?: string;
+  csmContact?: string;
+  status?: ParticipantStatus;
+  sessionLink?: string;
+  sessionPassword?: string;
+  sessionDoc?: string;
   scheduledAt?: string;
   transcript?: string;
   findings?: string;
+  msg1?: string;
+  msg2?: string;
   [k: string]: unknown;
 };
 
