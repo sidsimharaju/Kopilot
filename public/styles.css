@@ -175,22 +175,28 @@ html, body {
 /* ── OBJECTIVE TABLE ── */
 .obj-hdr {
   display: grid;
-  grid-template-columns: 90px 1fr 1fr 1fr 1fr 1fr 1fr 36px;
+  grid-template-columns: 90px 1fr 1.6fr 2fr 1fr 1fr 1fr 36px;
   gap: 1px; background: var(--border);
   border: 1px solid var(--border); border-radius: var(--rsm) var(--rsm) 0 0; overflow: hidden;
 }
 .obj-row {
   display: grid;
-  grid-template-columns: 90px 1fr 1fr 1fr 1fr 1fr 1fr 36px;
+  grid-template-columns: 90px 1fr 1.6fr 2fr 1fr 1fr 1fr 36px;
   gap: 1px; background: var(--border);
   border: 1px solid var(--border); border-top: none;
+  align-items: stretch;
 }
 .obj-row:last-child { border-radius: 0 0 var(--rsm) var(--rsm); overflow: hidden; }
-.ohc { background: var(--page); padding: 7px 10px; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--t3); }
-.occ { background: var(--white); padding: 5px 7px; }
-.occ .inp, .occ .sel, .occ .ta { border: none; padding: 4px 6px; font-size: 12px; border-radius: 3px; box-shadow: none; }
+.ohc { background: var(--page); padding: 9px 12px; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--t3); }
+.occ { background: var(--white); padding: 8px 10px; display: flex; }
+.occ .inp, .occ .sel, .occ .ta { border: none; padding: 6px 8px; font-size: 13px; border-radius: 3px; box-shadow: none; line-height: 1.55; width: 100%; }
 .occ .inp:focus, .occ .sel:focus, .occ .ta:focus { border: 1px solid var(--border); box-shadow: none; }
-.occ .ta { min-height: 54px; resize: vertical; }
+.occ .ta {
+  min-height: 96px;
+  resize: none;
+  overflow: hidden;
+  field-sizing: content;
+}
 .delbtn {
   background: transparent; border: none; color: var(--t4);
   cursor: pointer; font-size: 17px; padding: 6px 0 0;
@@ -282,9 +288,73 @@ html, body {
 .ch { background: #dcfce7; color: #15803d; }
 .cm { background: #fef3c7; color: #92400e; }
 .cl { background: #f4f4f5; color: #71717a; }
-.ni { display: flex; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border-lt); font-size: 13px; line-height: 1.5; }
+.ni { display: flex; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border-lt); font-size: 13px; line-height: 1.5; align-items: flex-start; }
 .ni:last-child { border-bottom: none; }
 .nn { font-size: 12px; color: var(--t3); min-width: 18px; margin-top: 1px; flex-shrink: 0; }
+
+/* ── EDITABLE ANALYSIS ── */
+.ed-block, .ed-line {
+  outline: none;
+  border-radius: 4px;
+  transition: background 0.12s, box-shadow 0.12s;
+  cursor: text;
+}
+.ed-block { font-size: 14px; line-height: 1.7; padding: 12px 14px; background: var(--page); margin-bottom: 14px; }
+.ed-line { padding: 3px 6px; margin: -3px -6px; }
+.ed-line.ed-inline { display: inline-block; }
+.ed-strong { font-weight: 500; font-size: 13px; margin-bottom: 3px; }
+.ed-muted  { font-size: 11px; color: var(--t3); margin-top: 3px; }
+.ed-block:hover, .ed-line:hover { background: rgba(0,0,0,0.025); }
+.ed-block:focus, .ed-line:focus { background: #fff; box-shadow: 0 0 0 1px var(--border); }
+.ed-block:empty::before, .ed-line:empty::before {
+  content: attr(data-placeholder);
+  color: var(--t4);
+  font-style: italic;
+}
+.ed-x {
+  background: transparent; border: none; color: var(--t4);
+  cursor: pointer; font-size: 14px; padding: 2px 6px; line-height: 1;
+  opacity: 0; transition: opacity 0.12s, color 0.12s;
+}
+.ed-theme:hover .ed-x, .ni:hover .ed-x, .ed-x:focus { opacity: 1; }
+.ed-x:hover { color: var(--red); }
+
+/* ── RICH TEXT EDITOR ── */
+.rte-wrap { border: 1px solid var(--border); border-radius: var(--rsm); overflow: hidden; background: #fff; }
+.rte-toolbar {
+  display: flex; align-items: center; gap: 2px; padding: 6px 8px;
+  background: var(--page); border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.rte-btn {
+  background: transparent; border: none; cursor: pointer;
+  padding: 4px 8px; border-radius: 4px; font-size: 12px;
+  color: var(--t1); min-width: 28px; line-height: 1.2;
+  font-family: var(--font); transition: background 0.1s, color 0.1s;
+}
+.rte-btn:hover { background: rgba(0,0,0,0.06); }
+.rte-btn:active { background: rgba(0,0,0,0.1); }
+.rte-sep { width: 1px; height: 16px; background: var(--border); margin: 0 4px; }
+.rte {
+  min-height: 260px; padding: 16px 18px; outline: none;
+  font-size: 14px; line-height: 1.65; color: var(--text);
+}
+.rte:empty::before {
+  content: attr(data-placeholder);
+  color: var(--t4); font-style: italic; pointer-events: none;
+}
+.rte h2 { font-size: 17px; font-weight: 600; margin: 18px 0 8px; color: var(--text); }
+.rte h3 { font-size: 14px; font-weight: 600; margin: 14px 0 6px; color: var(--text); }
+.rte p { margin: 0 0 10px; }
+.rte ul, .rte ol { margin: 8px 0 12px; padding-left: 24px; }
+.rte li { margin: 4px 0; }
+.rte blockquote { border-left: 3px solid var(--border); padding: 4px 14px; margin: 10px 0; color: var(--t2); font-style: italic; }
+.rte hr { border: none; border-top: 1px solid var(--border-lt); margin: 18px 0; }
+.rte strong { font-weight: 600; }
+.rte code { background: var(--page); padding: 1px 5px; border-radius: 3px; font-size: 0.92em; font-family: ui-monospace, monospace; }
+.rte pre { background: var(--page); padding: 10px 12px; border-radius: 4px; overflow-x: auto; font-size: 12px; }
+.rte a { color: #2563eb; text-decoration: underline; }
+.rte:focus { box-shadow: inset 0 0 0 1px var(--border); }
 
 /* ── FINALIZE ── */
 .fr { display: flex; align-items: flex-start; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border-lt); }
@@ -301,9 +371,12 @@ html, body {
 /* ── INLINE CONTROLS ── */
 .isel { background: transparent; border: none; border-bottom: 1px solid var(--border); padding: 2px 4px; color: var(--text); font-family: var(--font); font-size: 12px; outline: none; cursor: pointer; appearance: none; min-width: 90px; }
 .isel:focus { border-bottom-color: var(--t2); }
-.iinp { background: transparent; border: none; border-bottom: 1px solid var(--border); padding: 2px 4px; color: var(--text); font-family: var(--font); font-size: 12px; outline: none; width: 150px; }
-.iinp:focus { border-bottom-color: var(--t2); }
+.iinp { background: transparent; border: none; border-bottom: 1px solid transparent; padding: 2px 4px; color: var(--text); font-family: var(--font); font-size: 12px; outline: none; width: 150px; transition: border-color 0.12s, background 0.12s; }
+.iinp:hover { border-bottom-color: var(--border-lt); }
+.iinp:focus { border-bottom-color: var(--t2); background: rgba(0,0,0,0.02); }
 .iinp::placeholder { color: var(--t4); }
+.iinp.inp-edit-name    { font-weight: 500; font-size: 13px; color: var(--text); }
+.iinp.inp-edit-contact { font-size: 11px; color: var(--t3); }
 
 /* ── OUTPUT BLOCK ── */
 .opanel { background: var(--page); border: 1px solid var(--border); border-radius: var(--r); padding: 14px; font-size: 13px; color: var(--text); white-space: pre-wrap; line-height: 1.7; }
@@ -740,6 +813,21 @@ hr { border: none; border-top: 1px solid var(--border-lt); margin: 4px 0; }
   color: var(--white); background: var(--t2); padding: 1px 5px; border-radius: 3px;
 }
 .ce-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-left: auto; }
+
+/* ── EDITABLE CUSTOMER ENTRY FIELDS ── */
+.ce-name-inp, .ce-meta-inp, .ce-email-inp {
+  background: transparent; border: none; padding: 2px 4px; margin: -2px -4px;
+  border-radius: 3px; font-family: var(--font); outline: none;
+  transition: background 0.12s, box-shadow 0.12s;
+}
+.ce-name-inp  { font-size: 13px; font-weight: 500; color: var(--text); width: 100%; }
+.ce-meta-inp  { font-size: 12px; color: var(--t2); flex: 1; min-width: 60px; max-width: 180px; }
+.ce-email-inp { font-size: 11px; color: var(--t3); width: 100%; margin-top: 2px; }
+.ce-name-inp:hover, .ce-meta-inp:hover, .ce-email-inp:hover { background: rgba(0,0,0,0.025); }
+.ce-name-inp:focus, .ce-meta-inp:focus, .ce-email-inp:focus { background: #fff; box-shadow: 0 0 0 1px var(--border); }
+.ce-name-inp::placeholder, .ce-meta-inp::placeholder, .ce-email-inp::placeholder { color: var(--t4); font-style: italic; }
+.ce-meta-row { display: flex; align-items: center; gap: 4px; margin-top: 1px; }
+.ce-dot { color: var(--t4); font-size: 11px; flex-shrink: 0; }
 
 /* ── ADDED MINI ── */
 .added-mini {

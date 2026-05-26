@@ -86,6 +86,9 @@
           <circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.4"/>
         </svg>
       </button>
+      <button class="btn sm" id="share-btn" onclick="copyShareLink()" title="Copy share link">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:-1px"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Share
+      </button>
       <a class="btn sm" href="https://calendar.google.com/calendar/u/0/appointments/schedules/AcZssZ0bZDEAafZ3V3A1SbI4Vg8-G_Y6RcdKcTtwdesn2xTDBSG9eHwE2erp6lloTCz85Bz2s7XL-H6u" target="_blank" style="text-decoration:none">BTS</a>
       <div class="av">SL</div>
     </div>
@@ -172,7 +175,7 @@
         <div class="ptitle">Project details</div>
         <div class="g3" style="margin-bottom:12px">
           <div><label class="fl">Project name</label><input class="inp" id="f-name" placeholder="e.g. Context Mesh Discovery" oninput="liveTitle()"/></div>
-          <div><label class="fl">Date</label><input class="inp" id="f-date" type="date"/></div>
+          <div><label class="fl">Research start date</label><input class="inp" id="f-date" type="date"/></div>
           <div><label class="fl">Product area</label><input class="inp" id="f-area" placeholder="e.g. Core Platform"/></div>
         </div>
         <div class="g2" style="margin-bottom:12px">
@@ -229,7 +232,6 @@
           <div class="ohc"></div>
         </div>
         <div id="obj-rows"></div>
-        <div style="margin-top:8px"><button class="btn sm" onclick="addObjRow()">+ Add row</button></div>
       </div>
 
       <!-- ══ RESEARCH DESIGN ══ -->
@@ -601,11 +603,7 @@
                 <div class="source-step-num">3</div>
                 <div class="source-step-body">
                   <div class="source-step-title">Draft CSM messages</div>
-                  <p class="hint" style="line-height:1.6;margin-bottom:10px">Message 1 is a short connection request. Message 2 is sent after they respond — full context, options: intro you, add you to a call, or let you reach out directly. Booking link gets embedded.</p>
-                  <div style="margin-bottom:12px">
-                    <label class="fl">Customer booking link <span style="font-weight:400;color:var(--t3)">(set max 2 slots in GCal)</span></label>
-                    <input class="inp" id="f-customer-link" placeholder="https://cal.app/…" style="max-width:340px" oninput="scheduleAutoSave()"/>
-                  </div>
+                  <p class="hint" style="line-height:1.6;margin-bottom:10px">A short Slack message from the designer asking the CSM to help reach a target customer for a quick research session.</p>
                   <div id="msglist-customer"></div>
                   <button class="btn sm" onclick="genCohortMessages('customer')" style="margin-top:8px">✦ Generate all CSM messages</button>
                 </div>
@@ -622,6 +620,7 @@
                   <div id="customer-nocsm-list"></div>
                   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
                     <button class="btn sm filled" onclick="toggleInlineAdd('customer-nocsm')">+ Add customer</button>
+                    <button class="btn sm" onclick="triggerCSVUpload('customer-nocsm')">+ Upload CSV</button>
                   </div>
                   <div id="inline-add-customer-nocsm" class="inline-add-form" style="display:none">
                     <div class="g2" style="margin-bottom:8px">
@@ -757,6 +756,7 @@
             Session participants
             <div class="r">
               <button class="btn sm filled" onclick="toggleManageAddForm()">+ Add person</button>
+              <a class="btn sm" href="https://konghq.zoom.us/recording/" target="_blank" rel="noopener">View your recordings ↗</a>
               <button class="btn sm" onclick="triggerManageUpload()">+ Upload</button>
             </div>
           </div>

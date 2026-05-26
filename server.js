@@ -140,6 +140,74 @@ app.get('/auth/logout', (req, res) => {
 });
 
 // ════════════════════════════════════════════════════════════
+// PUBLIC SHARE ROUTES — bypass the auth guard
+// ════════════════════════════════════════════════════════════
+
+const crypto = require('crypto');
+function newShareToken() { return crypto.randomBytes(12).toString('hex'); }
+const TRANSCRIPT_CHAR_LIMIT = 20000;
+
+// Static assets used by the share viewer (no PII, safe to serve unauthenticated)
+const PUBLIC_STATIC = new Set(['/app.js', '/styles.css', '/favicon.ico']);
+const PUBLIC_STATIC_RE = /\.(js|css|png|jpg|jpeg|svg|ico|webp|woff2?)$/i;
+
+const PROJECTS_SHARE = () => db.collection('projects');
+
+// Find a project by shareToken (resolves to project id)
+async function findProjectByShareToken(token) {
+  if (!token) return null;
+  const snap = await PROJECTS_SHARE().where('shareToken', '==', token).limit(1).get();
+  if (snap.empty) return null;
+  const doc = snap.docs[0];
+  return { id: doc.id, data: doc.data() };
+}
+
+// Public share-link viewer — serves the SPA so the client can fetch via /api/projects/share/:token
+app.get('/share/:token', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/api/projects/share/:token', async (req, res) => {
+  try {
+    const found = await findProjectByShareToken(req.params.token);
+    if (!found) return res.status(404).json({ error: 'Not found' });
+    res.json({ id: found.id, ...found.data });
+  } catch (err) {
+    console.error('Share get error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/projects/share/:token', express.json({ limit: '10mb' }), async (req, res) => {
+  try {
+    const found = await findProjectByShareToken(req.params.token);
+    if (!found) return res.status(404).json({ error: 'Not found' });
+    const data = { ...req.body, updatedAt: new Date().toISOString(), shareToken: req.params.token };
+    if (data.S?.participants) {
+      data.S.participants = data.S.participants.map(p => ({
+        ...p,
+        transcript: (p.transcript || '').slice(0, TRANSCRIPT_CHAR_LIMIT),
+      }));
+    }
+    await PROJECTS_SHARE().doc(found.id).set(data);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Share save error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Allow unauthenticated requests for share routes and static assets used by them
+app.use((req, res, next) => {
+  if (req.path.startsWith('/share/') || req.path.startsWith('/api/projects/share/')) return next();
+  if (PUBLIC_STATIC.has(req.path) || PUBLIC_STATIC_RE.test(req.path)) {
+    // Serve static asset directly via the static middleware path
+    return express.static(path.join(__dirname, 'public'))(req, res, next);
+  }
+  next();
+});
+
+// ════════════════════════════════════════════════════════════
 // AUTH GUARD — all routes below require login
 // ════════════════════════════════════════════════════════════
 
@@ -159,7 +227,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ════════════════════════════════════════════════════════════
 
 const PROJECTS = db.collection('projects');
-const TRANSCRIPT_CHAR_LIMIT = 20000;
 
 app.get('/api/projects', async (req, res) => {
   try {
@@ -185,6 +252,10 @@ app.get('/api/projects/:id', async (req, res) => {
 app.put('/api/projects/:id', async (req, res) => {
   try {
     const data = { ...req.body, updatedAt: new Date().toISOString() };
+    if (!data.shareToken) {
+      const existing = await PROJECTS.doc(req.params.id).get();
+      data.shareToken = existing.exists ? (existing.data().shareToken || newShareToken()) : newShareToken();
+    }
     // Cap transcript size to stay well under Firestore's 1MB document limit
     if (data.S?.participants) {
       data.S.participants = data.S.participants.map(p => ({
@@ -193,7 +264,7 @@ app.put('/api/projects/:id', async (req, res) => {
       }));
     }
     await PROJECTS.doc(req.params.id).set(data);
-    res.json({ ok: true });
+    res.json({ ok: true, shareToken: data.shareToken });
   } catch (err) {
     console.error('Save project error:', err);
     res.status(500).json({ error: err.message });
@@ -236,6 +307,38 @@ app.get('/api/skills/:name', (req, res) => {
     res.status(404).json({ error: 'Skill not found' });
   }
 });
+
+// ════════════════════════════════════════════════════════════
+// DOCUMENT PARSER — extracts text from .docx / .txt / .md
+// ════════════════════════════════════════════════════════════
+
+const mammoth = require('mammoth');
+
+app.post(
+  '/api/parse-doc',
+  express.raw({ type: '*/*', limit: '20mb' }),
+  async (req, res) => {
+    try {
+      const filename = (req.query.filename || '').toLowerCase();
+      const buf = req.body;
+      if (!buf || !buf.length) return res.status(400).json({ error: 'empty body' });
+
+      let text = '';
+      if (filename.endsWith('.docx')) {
+        const result = await mammoth.extractRawText({ buffer: buf });
+        text = result.value || '';
+      } else {
+        text = buf.toString('utf8');
+      }
+
+      text = text.replace(/\r\n/g, '\n').trim();
+      res.json({ text });
+    } catch (err) {
+      console.error('Parse doc error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  }
+);
 
 // ════════════════════════════════════════════════════════════
 // AGENT ENDPOINT — OpenAI

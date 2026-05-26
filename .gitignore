@@ -3,4 +3,12 @@ node_modules/
 .DS_Store
 *.log
 dist/
-.vercel
+
+# pasted screenshots / scratch notes
+image*.png
+sid-instructions.md
+
+# Next.js
+.next/
+out/
+next-env.d.ts
