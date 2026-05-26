@@ -12,3 +12,4 @@ sid-instructions.md
 .next/
 out/
 next-env.d.ts
+tsconfig.tsbuildinfo
