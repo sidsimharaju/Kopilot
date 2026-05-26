@@ -1,0 +1,44 @@
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { deleteProject, getProject, saveProject } from "@/lib/projects";
+import type { Project } from "@/lib/types";
+
+type Ctx = { params: Promise<{ id: string }> };
+
+export async function GET(_req: NextRequest, { params }: Ctx) {
+  const { id } = await params;
+  try {
+    const project = await getProject(id);
+    if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json(project);
+  } catch (err) {
+    console.error("Get project error:", err);
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function PUT(req: NextRequest, { params }: Ctx) {
+  const { id } = await params;
+  try {
+    const body = (await req.json()) as Partial<Project>;
+    const result = await saveProject(id, body);
+    return NextResponse.json({ ok: true, shareToken: result.shareToken });
+  } catch (err) {
+    console.error("Save project error:", err);
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function DELETE(_req: NextRequest, { params }: Ctx) {
+  const { id } = await params;
+  try {
+    await deleteProject(id);
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("Delete project error:", err);
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
