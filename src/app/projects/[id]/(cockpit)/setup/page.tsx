@@ -1,19 +1,12 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { notFound } from "next/navigation";
+import { SetupEditor } from "@/components/setup/setup-editor";
+import { getProject } from "@/lib/projects";
 
-export default function SetupPage() {
-  return (
-    <div className="flex flex-col gap-3.5">
-      <Card>
-        <CardHeader>
-          <CardTitle>Setup</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Setup tab ports in Phase 6: quickstart panel, project details,
-            learning objectives table, research design.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
-  );
+type Props = { params: Promise<{ id: string }> };
+
+export default async function SetupPage({ params }: Props) {
+  const { id } = await params;
+  const project = await getProject(id);
+  if (!project) notFound();
+  return <SetupEditor initial={project} />;
 }

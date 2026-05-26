@@ -26,10 +26,17 @@ export type SurveyParticipant = {
   [k: string]: unknown;
 };
 
+export type ObjectivePriority = "Must" | "Should" | "Could" | "Maybe Later";
+
 export type Objective = {
   id?: number;
-  text?: string;
-  notes?: string;
+  priority?: ObjectivePriority;
+  objective?: string;
+  hypothesis?: string;
+  keyQuestions?: string;
+  participants?: string;
+  methodology?: string;
+  goalTargets?: string;
   [k: string]: unknown;
 };
 
