@@ -1,7 +1,15 @@
 node_modules
+.next
 .env
 .env.local
-.vercel
 .git
 .gitignore
-*.md
+_legacy
+.claude
+*.tsbuildinfo
+image*.png
+sid-instructions.md
+AGENTS.md
+CLAUDE.md
+README.md
+.DS_Store
