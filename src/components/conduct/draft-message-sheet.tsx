@@ -37,12 +37,29 @@ type Props = {
   onSave: (msg: string) => void;
 };
 
+type MessageKind = "slack-internal" | "slack-csm" | "email-customer" | "email-noncustomer";
+
+function detectKind(participant: Participant): MessageKind {
+  if (participant.cohort === "noncustomer") return "email-noncustomer";
+  if (participant.cohort === "customer") {
+    return participant.csmName ? "slack-csm" : "email-customer";
+  }
+  return "slack-internal";
+}
+
+const KIND_LABEL: Record<MessageKind, string> = {
+  "slack-internal": "Slack message",
+  "slack-csm": "Slack message to CSM",
+  "email-customer": "Email to customer",
+  "email-noncustomer": "Email to non-Kong customer",
+};
+
 export function DraftMessageSheet({ participant, state, onSave }: Props) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [text, setText] = useState(participant.msg1 ?? "");
   const designerName = (state.designer ?? [])[0] || "the designer";
-  const isCSM = participant.cohort === "customer" && Boolean(participant.csmName);
+  const kind = detectKind(participant);
 
   async function run() {
     setBusy(true);
@@ -56,8 +73,9 @@ export function DraftMessageSheet({ participant, state, onSave }: Props) {
       const audType = participant.audience || "internal-fresh";
       const why = WHY_INTERNAL[audType] || "their specific background matters";
 
-      const prompt = isCSM
-        ? `Write a single Slack message from the designer to a CSM at Kong, asking them to help reach one of their customers for a short research conversation.
+      const prompt =
+        kind === "slack-csm"
+          ? `Write a single Slack message from the designer to a CSM at Kong, asking them to help reach one of their customers for a short research conversation.
 
 SAMPLE TONE (mimic this style — warm, casual, slightly apologetic, asks for the CSM's process knowledge too):
 "Hi [CSM]! I hope the time works okay for you tomorrow for 15 minutes — I was hoping to touch base with you about a way to reach some of your customers in the proper way. We've identified some of your accounts as our target participants for our [study descriptor] and wanted to reach them. I'd like to know more about your processes here and define a plan of action for myself. Thank you!"
@@ -79,7 +97,33 @@ RESEARCH TOPIC: ${topic}
 PROJECT PURPOSE: ${state.purpose || ""}
 
 Return ONLY valid JSON: {"msg1":"..."}`
-        : `Write a single Slack message from the designer to a colleague at Kong asking them to participate in a research session.
+          : kind === "email-customer"
+            ? `Write a recruitment email from the designer (${designerName}) at Kong to reach a Kong customer directly (no CSM available). Concise, warm, specific. No em dashes, no corporate phrases. Sign off as the designer (not as a researcher, not as Shikha).
+
+Include: what the study is about, what's involved (30-min ${guide}, no prep, no roadmap commitments, honest reactions are the point), clear CTA with a yes/no ask. Address them by first name if known.
+
+DESIGNER: ${designerName}
+RECIPIENT: ${participant.name}${participant.role ? ", " + participant.role : ""}${participant.company ? " at " + participant.company : ""}${participant.contact ? " (" + participant.contact + ")" : ""}
+STUDY: ${studyDescriptor}
+RESEARCH TOPIC: ${topic}
+PROJECT PURPOSE: ${state.purpose || ""}
+AREA: ${state.area || ""}
+
+Return ONLY valid JSON with both subject and body: {"msg1":"Subject: <subject line>\\n\\n<body>"}`
+            : kind === "email-noncustomer"
+              ? `Write a recruitment email from the designer (${designerName}) at Kong to reach a non-Kong customer for an outside-perspective research session. Concise, warm, specific. No em dashes, no corporate phrases. Acknowledge they may not know Kong and that an incentive is provided.
+
+Include: who the sender is, what the study is about, what's involved (30-min ${guide}, paid via Respondent or similar), clear CTA with a yes/no ask. Leave [INCENTIVE] placeholder.
+
+DESIGNER: ${designerName}
+RECIPIENT: ${participant.name}${participant.role ? ", " + participant.role : ""}${participant.company ? " at " + participant.company : ""}${participant.contact ? " (" + participant.contact + ")" : ""}
+STUDY: ${studyDescriptor}
+RESEARCH TOPIC: ${topic}
+PROJECT PURPOSE: ${state.purpose || ""}
+AREA: ${state.area || ""}
+
+Return ONLY valid JSON with both subject and body: {"msg1":"Subject: <subject line>\\n\\n<body>"}`
+              : `Write a single Slack message from the designer to a colleague at Kong asking them to participate in a research session.
 
 RULES:
 - One message only. 3-4 sentences max.
@@ -94,7 +138,7 @@ PROJECT: ${state.projectName || "research study"}, ${state.area || "our product"
 
 Return ONLY valid JSON: {"msg1":"..."}`;
 
-      const data = await callAgentJSON<{ msg1?: string }>(prompt, { max_tokens: 400 });
+      const data = await callAgentJSON<{ msg1?: string }>(prompt, { max_tokens: 600 });
       const msg = (data.msg1 ?? "").trim();
       if (!msg) {
         toast.error("No message returned");
@@ -140,7 +184,7 @@ Return ONLY valid JSON: {"msg1":"..."}`;
       />
       <SheetContent className="flex w-full flex-col gap-4 sm:max-w-[480px]">
         <SheetHeader>
-          <SheetTitle>Draft outreach message</SheetTitle>
+          <SheetTitle>{KIND_LABEL[kind]}</SheetTitle>
           <SheetDescription>
             For {participant.name || "this participant"}
             {participant.company ? ` at ${participant.company}` : ""}.
@@ -160,13 +204,19 @@ Return ONLY valid JSON: {"msg1":"..."}`;
             {busy ? "Drafting…" : text ? "Regenerate" : "Generate draft"}
           </Button>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="draft-text">Message</Label>
+            <Label htmlFor="draft-text">
+              {kind.startsWith("email-") ? "Email" : "Message"}
+            </Label>
             <Textarea
               id="draft-text"
               rows={12}
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Click Generate to draft a Slack message, or write your own."
+              placeholder={
+                kind.startsWith("email-")
+                  ? "Click Generate to draft an email, or write your own."
+                  : "Click Generate to draft a Slack message, or write your own."
+              }
             />
           </div>
         </div>

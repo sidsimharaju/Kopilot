@@ -57,29 +57,22 @@ export function Sidebar({
             key={item.href}
             href={item.href}
             className={cn(
-              "group flex select-none items-center gap-2 rounded-[4px] px-[9px] py-[7px] text-[13px] text-muted-foreground transition-colors",
+              "group flex select-none items-center gap-2 rounded-md px-2.5 py-2 text-sm text-muted-foreground transition-colors",
               "hover:bg-accent hover:text-foreground",
               active && "bg-accent font-medium text-foreground",
             )}
           >
-            <Icon
-              className={cn(
-                "size-[15px] flex-shrink-0 text-muted-foreground transition-colors",
-                "group-hover:text-muted-foreground",
-                active && "text-muted-foreground",
-              )}
-            />
+            <Icon className="size-4 flex-shrink-0" />
             <span className="flex-1">{item.label}</span>
             {item.badge !== undefined ? (
-              <span className="ml-auto rounded-[10px] bg-muted px-1.5 py-px text-[11px] text-muted-foreground">
+              <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-[10.5px] text-muted-foreground">
                 {item.badge}
               </span>
             ) : (
               <span
                 className={cn(
                   "ml-auto size-1.5 flex-shrink-0 rounded-full border-[1.5px] border-border transition-all",
-                  item.done && "border-success bg-success",
-                  active && !item.done && "border-border",
+                  item.done && "border-chart-2 bg-chart-2",
                 )}
               />
             )}

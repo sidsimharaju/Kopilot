@@ -4,7 +4,13 @@ import { useRef, useState } from "react";
 import { ChevronDown, Sparkles, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { callAgentJSON } from "@/lib/agent";
 import { cn } from "@/lib/utils";
@@ -186,21 +192,23 @@ Rules:
 
   return (
     <Card className="border-chart-3/30 bg-chart-3/[0.04]">
-      <CardHeader className="flex-row items-center justify-between">
+      <CardHeader>
         <CardTitle className="flex items-center gap-2 text-[14px]">
           <Sparkles className="size-4 text-chart-3" />
           Quick start
         </CardTitle>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => setOpen((v) => !v)}
-          aria-label={open ? "Collapse" : "Expand"}
-        >
-          <ChevronDown
-            className={cn("size-4 transition-transform", !open && "-rotate-90")}
-          />
-        </Button>
+        <CardAction>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => setOpen((v) => !v)}
+            aria-label={open ? "Collapse" : "Expand"}
+          >
+            <ChevronDown
+              className={cn("size-4 transition-transform", !open && "-rotate-90")}
+            />
+          </Button>
+        </CardAction>
       </CardHeader>
       {open ? (
         <CardContent className="flex flex-col gap-4">

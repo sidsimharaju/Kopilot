@@ -140,7 +140,14 @@ export function ManageTable({ state, update }: Props) {
                         <SelectContent>
                           {STATUS_VALUES.map((s) => (
                             <SelectItem key={s} value={s}>
-                              {STATUS_LABEL[s]}
+                              <span
+                                className={cn(
+                                  "inline-flex items-center rounded-full px-2 py-0.5 text-[10.5px] font-medium",
+                                  STATUS_TONE[s],
+                                )}
+                              >
+                                {STATUS_LABEL[s]}
+                              </span>
                             </SelectItem>
                           ))}
                         </SelectContent>

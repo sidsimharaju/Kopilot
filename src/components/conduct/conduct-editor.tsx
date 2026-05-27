@@ -20,9 +20,11 @@ const COHORT_TAB_LABEL: Record<Cohort, string> = {
   noncustomers: "Non-Kong customers",
 };
 
+const COHORT_ORDER: Cohort[] = ["internal", "customers", "noncustomers"];
+
 export function ConductEditor({ initial }: { initial: Project }) {
   const { project, status, update, updateProject } = useProject(initial);
-  const selectedCohorts = (Object.keys(project.S.cohorts ?? {}) as Cohort[]).filter(
+  const selectedCohorts = COHORT_ORDER.filter(
     (c) => (project.S.cohorts ?? {})[c],
   );
 

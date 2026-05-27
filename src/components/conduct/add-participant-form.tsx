@@ -4,11 +4,20 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { Participant, ParticipantCohort } from "@/lib/types";
 
 type Props = {
   cohort: ParticipantCohort;
   withCSM?: boolean;
+  initial?: Participant;
+  submitLabel?: string;
   onAdd: (p: Omit<Participant, "id">) => void;
   onCancel: () => void;
 };
@@ -28,18 +37,28 @@ const AUDIENCE_OPTIONS: Record<ParticipantCohort, Array<{ value: string; label: 
   noncustomer: [{ value: "noncustomer", label: "Non-Kong (Respondent)" }],
 };
 
-export function AddParticipantForm({ cohort, withCSM, onAdd, onCancel }: Props) {
-  const [name, setName] = useState("");
-  const [role, setRole] = useState("");
-  const [company, setCompany] = useState("");
-  const [contact, setContact] = useState("");
-  const [audience, setAudience] = useState(AUDIENCE_OPTIONS[cohort][0].value);
-  const [csmName, setCsmName] = useState("");
-  const [csmContact, setCsmContact] = useState("");
+export function AddParticipantForm({
+  cohort,
+  withCSM,
+  initial,
+  submitLabel,
+  onAdd,
+  onCancel,
+}: Props) {
+  const [name, setName] = useState(initial?.name ?? "");
+  const [role, setRole] = useState(initial?.role ?? "");
+  const [company, setCompany] = useState(initial?.company ?? "");
+  const [contact, setContact] = useState(initial?.contact ?? "");
+  const [audience, setAudience] = useState(
+    initial?.audience ?? AUDIENCE_OPTIONS[cohort][0].value,
+  );
+  const [csmName, setCsmName] = useState(initial?.csmName ?? "");
+  const [csmContact, setCsmContact] = useState(initial?.csmContact ?? "");
 
   function submit() {
     if (!name.trim()) return;
     const base: Omit<Participant, "id"> = {
+      ...(initial ?? {}),
       name: name.trim(),
       role: role.trim(),
       company: company.trim(),
@@ -47,7 +66,7 @@ export function AddParticipantForm({ cohort, withCSM, onAdd, onCancel }: Props) 
       cohort,
       type: cohort === "internal" ? "internal" : "external",
       audience,
-      status: "identified",
+      status: initial?.status ?? "identified",
     };
     if (cohort === "customer") {
       base.hasCSM = Boolean(withCSM);
@@ -60,7 +79,7 @@ export function AddParticipantForm({ cohort, withCSM, onAdd, onCancel }: Props) 
   }
 
   return (
-    <div className="rounded-md border border-border bg-card p-3 flex flex-col gap-2">
+    <div className="flex flex-col gap-3 rounded-md border border-border bg-card p-3">
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
         <div className="flex flex-col gap-1">
           <Label>Full name</Label>
@@ -72,28 +91,37 @@ export function AddParticipantForm({ cohort, withCSM, onAdd, onCancel }: Props) 
         </div>
         <div className="flex flex-col gap-1">
           <Label>{cohort === "internal" ? "Team" : "Company"}</Label>
-          <Input value={company} onChange={(e) => setCompany(e.target.value)} placeholder={cohort === "internal" ? "Platform team" : "Acme Corp"} />
+          <Input
+            value={company}
+            onChange={(e) => setCompany(e.target.value)}
+            placeholder={cohort === "internal" ? "Platform team" : "Acme Corp"}
+          />
         </div>
         <div className="flex flex-col gap-1">
           <Label>{cohort === "internal" ? "Slack handle" : "Email"}</Label>
-          <Input value={contact} onChange={(e) => setContact(e.target.value)} placeholder={cohort === "internal" ? "@jane" : "jane@acme.com"} />
+          <Input
+            value={contact}
+            onChange={(e) => setContact(e.target.value)}
+            placeholder={cohort === "internal" ? "@jane" : "jane@acme.com"}
+          />
         </div>
       </div>
 
       {cohort !== "noncustomer" ? (
         <div className="flex flex-col gap-1">
           <Label>Audience type</Label>
-          <select
-            value={audience}
-            onChange={(e) => setAudience(e.target.value)}
-            className="rounded-md border border-input bg-card px-2 py-1.5 text-[13px]"
-          >
-            {AUDIENCE_OPTIONS[cohort].map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
+          <Select value={audience} onValueChange={(v) => v && setAudience(v)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {AUDIENCE_OPTIONS[cohort].map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       ) : null}
 
@@ -112,7 +140,7 @@ export function AddParticipantForm({ cohort, withCSM, onAdd, onCancel }: Props) 
 
       <div className="flex gap-2 pt-1">
         <Button size="sm" onClick={submit} disabled={!name.trim()}>
-          Add
+          {submitLabel ?? "Add"}
         </Button>
         <Button size="sm" variant="outline" onClick={onCancel}>
           Cancel

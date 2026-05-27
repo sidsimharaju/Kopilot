@@ -1,9 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   AUDIENCE_LABELS,
   COHORT_PILL,
@@ -14,6 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { Participant, ParticipantCohort, ProjectState } from "@/lib/types";
 import { AddParticipantForm } from "./add-participant-form";
+import { EditParticipantSheet } from "./edit-participant-sheet";
 
 type Props = {
   cohort: ParticipantCohort;
@@ -37,7 +45,9 @@ const COHORT_HELP: Record<ParticipantCohort, string> = {
 
 export function CohortRecruitCard({ cohort, state, pid, update, updateProject }: Props) {
   const [showAdd, setShowAdd] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const participants = (state.participants ?? []).filter((p) => p.cohort === cohort);
+  const editing = participants.find((p) => p.id === editingId) ?? null;
 
   function addParticipant(data: Omit<Participant, "id">) {
     const newId = pid ?? 1;
@@ -49,6 +59,15 @@ export function CohortRecruitCard({ cohort, state, pid, update, updateProject }:
     setShowAdd(false);
   }
 
+  function updateParticipant(id: number, data: Omit<Participant, "id">) {
+    update((s) => ({
+      ...s,
+      participants: (s.participants ?? []).map((p) =>
+        p.id === id ? { ...p, ...data, id } : p,
+      ),
+    }));
+  }
+
   function removeParticipant(id: number) {
     update((s) => ({
       ...s,
@@ -58,22 +77,22 @@ export function CohortRecruitCard({ cohort, state, pid, update, updateProject }:
 
   return (
     <Card>
-      <CardHeader className="flex-row items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <CardTitle className="flex items-center gap-2">
-            <span className={cn("rounded-full px-2 py-0.5 text-[10.5px] font-semibold", COHORT_PILL[cohort])}>
-              {COHORT_TITLE[cohort]}
-            </span>
-            <span className="text-[11px] font-normal text-muted-foreground">
-              {participants.length} added
-            </span>
-          </CardTitle>
-          <p className="text-[12px] text-muted-foreground">{COHORT_HELP[cohort]}</p>
-        </div>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <span className={cn("rounded-full px-2 py-0.5 text-[10.5px] font-semibold", COHORT_PILL[cohort])}>
+            {COHORT_TITLE[cohort]}
+          </span>
+          <span className="text-[11px] font-normal text-muted-foreground">
+            {participants.length} added
+          </span>
+        </CardTitle>
+        <CardDescription>{COHORT_HELP[cohort]}</CardDescription>
         {!showAdd ? (
-          <Button size="sm" onClick={() => setShowAdd(true)} className="gap-1.5">
-            <Plus className="size-3.5" /> Add person
-          </Button>
+          <CardAction>
+            <Button size="sm" onClick={() => setShowAdd(true)} className="gap-1.5">
+              <Plus className="size-3.5" /> Add person
+            </Button>
+          </CardAction>
         ) : null}
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
@@ -93,9 +112,11 @@ export function CohortRecruitCard({ cohort, state, pid, update, updateProject }:
         ) : (
           <div className="flex flex-col gap-1.5">
             {participants.map((p) => (
-              <div
+              <button
                 key={p.id}
-                className="flex items-center gap-3 rounded border border-border bg-background px-2.5 py-2"
+                type="button"
+                onClick={() => setEditingId(p.id!)}
+                className="group flex items-center gap-3 rounded-md border border-border bg-background px-2.5 py-2 text-left transition-colors hover:border-foreground/30 hover:bg-accent"
               >
                 <span className="flex size-7 flex-shrink-0 items-center justify-center rounded-full bg-muted text-[10.5px] font-semibold text-muted-foreground">
                   {initials(p.name)}
@@ -117,19 +138,42 @@ export function CohortRecruitCard({ cohort, state, pid, update, updateProject }:
                 >
                   {STATUS_LABEL[p.status ?? "identified"]}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => removeParticipant(p.id!)}
+                <Pencil className="size-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeParticipant(p.id!);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.stopPropagation();
+                      removeParticipant(p.id!);
+                    }
+                  }}
                   className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                   aria-label="Remove participant"
                 >
                   <Trash2 className="size-3.5" />
-                </button>
-              </div>
+                </span>
+              </button>
             ))}
           </div>
         )}
       </CardContent>
+      {editing ? (
+        <EditParticipantSheet
+          participant={editing}
+          cohort={cohort}
+          withCSM={cohort === "customer" && Boolean(editing.hasCSM)}
+          open={editingId !== null}
+          onOpenChange={(open) => {
+            if (!open) setEditingId(null);
+          }}
+          onSave={(data) => updateParticipant(editing.id!, data)}
+        />
+      ) : null}
     </Card>
   );
 }

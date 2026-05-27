@@ -71,7 +71,7 @@ export function ProjectCard({ project }: { project: Project }) {
       <button
         type="button"
         onClick={open}
-        className="group flex w-full flex-col gap-3 rounded-lg border border-border bg-card p-5 text-left transition-colors hover:border-foreground/30"
+        className="group flex w-full flex-col gap-3 rounded-xl bg-card p-5 text-left shadow-sm ring-1 ring-foreground/10 transition-all hover:shadow-md hover:ring-foreground/20"
       >
         <div className="flex items-start justify-between gap-2">
           <div className="truncate text-[15px] font-semibold tracking-tight">{name}</div>

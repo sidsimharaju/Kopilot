@@ -13,7 +13,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -76,16 +83,16 @@ export function ObjectivesTable({ state, oid, update, updateProject }: Props) {
 
   return (
     <Card>
-      <CardHeader className="flex-row items-center justify-between">
-        <div>
-          <CardTitle>Learning objectives</CardTitle>
-          <p className="mt-1 text-[12px] text-muted-foreground">
-            Fill each column to match the research plan template.
-          </p>
-        </div>
-        <Button size="sm" variant="outline" onClick={addObjective} className="gap-1.5">
-          <Plus className="size-3.5" /> Add objective
-        </Button>
+      <CardHeader>
+        <CardTitle>Learning objectives</CardTitle>
+        <CardDescription>
+          Fill each column to match the research plan template.
+        </CardDescription>
+        <CardAction>
+          <Button size="sm" variant="outline" onClick={addObjective} className="gap-1.5">
+            <Plus className="size-3.5" /> Add objective
+          </Button>
+        </CardAction>
       </CardHeader>
       <CardContent>
         {objectives.length === 0 ? (
@@ -131,62 +138,83 @@ export function ObjectivesTable({ state, oid, update, updateProject }: Props) {
                     </TableCell>
                     <TableCell>
                       <Textarea
-                        rows={2}
+                        rows={4}
                         placeholder="What do you want to learn?"
                         value={o.objective ?? ""}
                         onChange={(e) =>
                           setField(o.id!, "objective", e.target.value)
                         }
+                        className="h-24 resize-none"
                       />
                     </TableCell>
                     <TableCell>
                       <Textarea
-                        rows={2}
+                        rows={4}
                         placeholder="Your best assumption"
                         value={o.hypothesis ?? ""}
                         onChange={(e) =>
                           setField(o.id!, "hypothesis", e.target.value)
                         }
+                        className="h-24 resize-none"
                       />
                     </TableCell>
                     <TableCell>
                       <Textarea
-                        rows={2}
-                        placeholder="One per line"
+                        rows={4}
+                        placeholder="- one per line&#10;- start each with -"
                         value={o.keyQuestions ?? ""}
                         onChange={(e) =>
                           setField(o.id!, "keyQuestions", e.target.value)
                         }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            const ta = e.currentTarget;
+                            const start = ta.selectionStart ?? 0;
+                            const before = ta.value.slice(0, start);
+                            const after = ta.value.slice(ta.selectionEnd ?? start);
+                            const insert = "\n- ";
+                            e.preventDefault();
+                            const next = before + insert + after;
+                            setField(o.id!, "keyQuestions", next);
+                            requestAnimationFrame(() => {
+                              ta.selectionStart = ta.selectionEnd = start + insert.length;
+                            });
+                          }
+                        }}
+                        className="h-24 resize-none"
                       />
                     </TableCell>
                     <TableCell>
                       <Textarea
-                        rows={2}
+                        rows={4}
                         placeholder="Who would be ideal?"
                         value={o.participants ?? ""}
                         onChange={(e) =>
                           setField(o.id!, "participants", e.target.value)
                         }
+                        className="h-24 resize-none"
                       />
                     </TableCell>
                     <TableCell>
                       <Textarea
-                        rows={2}
+                        rows={4}
                         placeholder="Method + format"
                         value={o.methodology ?? ""}
                         onChange={(e) =>
                           setField(o.id!, "methodology", e.target.value)
                         }
+                        className="h-24 resize-none"
                       />
                     </TableCell>
                     <TableCell>
                       <Textarea
-                        rows={2}
+                        rows={4}
                         placeholder="e.g. 3 of 5 rate 4+"
                         value={o.goalTargets ?? ""}
                         onChange={(e) =>
                           setField(o.id!, "goalTargets", e.target.value)
                         }
+                        className="h-24 resize-none"
                       />
                     </TableCell>
                     <TableCell className="text-center">

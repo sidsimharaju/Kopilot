@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { callAgentJSON } from "@/lib/agent";
@@ -102,11 +103,20 @@ export function ResearchDesign({ state, update }: Props) {
         </div>
 
         {selected.length > 0 ? (
-          <div className="flex flex-col gap-4">
+          <Tabs defaultValue={selected[0]} className="flex flex-col gap-3">
+            <TabsList className="w-fit">
+              {selected.map((c) => (
+                <TabsTrigger key={c} value={c}>
+                  {COHORT_LABEL[c]}
+                </TabsTrigger>
+              ))}
+            </TabsList>
             {selected.map((c) => (
-              <CohortDetail key={c} cohort={c} state={state} update={update} />
+              <TabsContent key={c} value={c}>
+                <CohortDetail cohort={c} state={state} update={update} />
+              </TabsContent>
             ))}
-          </div>
+          </Tabs>
         ) : null}
       </CardContent>
     </Card>
