@@ -11,8 +11,8 @@ import { SaveIndicator } from "./save-indicator";
 export function SetupEditor({ initial }: { initial: Project }) {
   const { project, status, update, updateProject } = useProject(initial);
   return (
-    <div className="flex flex-col gap-3.5">
-      <div className="flex items-center justify-end h-5">
+    <div className="relative flex flex-col gap-3.5">
+      <div className="pointer-events-none absolute right-0 -top-4 z-10">
         <SaveIndicator status={status} />
       </div>
       <QuickStart state={project.S} update={update} updateProject={updateProject} />

@@ -22,9 +22,9 @@ export const STATUS_LABEL: Record<ParticipantStatus, string> = {
 
 export const STATUS_TONE: Record<ParticipantStatus, string> = {
   identified: "bg-muted text-muted-foreground",
-  contacted: "bg-muted text-foreground",
-  scheduled: "bg-muted text-foreground",
-  completed: "bg-foreground text-background",
+  contacted: "bg-chart-3/15 text-chart-3",
+  scheduled: "bg-chart-4/20 text-chart-4",
+  completed: "bg-chart-2/15 text-chart-2",
   dropped: "bg-muted text-muted-foreground",
   "no-show": "bg-destructive/10 text-destructive",
 };
@@ -39,9 +39,9 @@ export const STATUS_VALUES: ParticipantStatus[] = [
 ];
 
 export const COHORT_PILL: Record<string, string> = {
-  internal: "bg-muted text-foreground",
-  customer: "bg-muted text-foreground",
-  noncustomer: "bg-foreground text-background",
+  internal: "bg-chart-2/15 text-chart-2",
+  customer: "bg-chart-3/15 text-chart-3",
+  noncustomer: "bg-chart-5/20 text-chart-5",
 };
 
 export const COHORT_LABEL_SHORT: Record<string, string> = {

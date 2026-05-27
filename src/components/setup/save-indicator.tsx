@@ -13,7 +13,7 @@ export function SaveIndicator({ status }: { status: SaveStatus }) {
   }
   if (status === "saved") {
     return (
-      <span className="inline-flex items-center gap-1 text-[11px] text-success">
+      <span className="inline-flex items-center gap-1 text-[11px] text-chart-2">
         <Check className="size-3" /> Saved
       </span>
     );

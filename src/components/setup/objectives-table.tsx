@@ -21,6 +21,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { PRIORITIES } from "@/lib/constants";
 import type { Objective, ObjectivePriority, Project, ProjectState } from "@/lib/types";
@@ -86,30 +94,30 @@ export function ObjectivesTable({ state, oid, update, updateProject }: Props) {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1100px] border-collapse text-[12.5px]">
-              <thead>
-                <tr className="text-left text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                  <th className="w-[100px] p-2">Priority</th>
-                  <th className="p-2">Objective</th>
-                  <th className="p-2">Hypothesis</th>
-                  <th className="p-2">Key questions</th>
-                  <th className="p-2">Target participants</th>
-                  <th className="p-2">Methodology</th>
-                  <th className="p-2">Goal targets</th>
-                  <th className="w-[40px] p-2"></th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table className="min-w-[1100px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[110px]">Priority</TableHead>
+                  <TableHead>Objective</TableHead>
+                  <TableHead>Hypothesis</TableHead>
+                  <TableHead>Key questions</TableHead>
+                  <TableHead>Target participants</TableHead>
+                  <TableHead>Methodology</TableHead>
+                  <TableHead>Goal targets</TableHead>
+                  <TableHead className="w-[44px]" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {objectives.map((o) => (
-                  <tr key={o.id} className="align-top">
-                    <td className="p-1">
+                  <TableRow key={o.id} className="align-top">
+                    <TableCell>
                       <Select
                         value={o.priority ?? "Must"}
                         onValueChange={(v) => {
                           if (v) setField(o.id!, "priority", v);
                         }}
                       >
-                        <SelectTrigger size="sm" className="w-full text-[12px]">
+                        <SelectTrigger size="sm" className="w-full">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -120,8 +128,8 @@ export function ObjectivesTable({ state, oid, update, updateProject }: Props) {
                           ))}
                         </SelectContent>
                       </Select>
-                    </td>
-                    <td className="p-1">
+                    </TableCell>
+                    <TableCell>
                       <Textarea
                         rows={2}
                         placeholder="What do you want to learn?"
@@ -130,8 +138,8 @@ export function ObjectivesTable({ state, oid, update, updateProject }: Props) {
                           setField(o.id!, "objective", e.target.value)
                         }
                       />
-                    </td>
-                    <td className="p-1">
+                    </TableCell>
+                    <TableCell>
                       <Textarea
                         rows={2}
                         placeholder="Your best assumption"
@@ -140,8 +148,8 @@ export function ObjectivesTable({ state, oid, update, updateProject }: Props) {
                           setField(o.id!, "hypothesis", e.target.value)
                         }
                       />
-                    </td>
-                    <td className="p-1">
+                    </TableCell>
+                    <TableCell>
                       <Textarea
                         rows={2}
                         placeholder="One per line"
@@ -150,8 +158,8 @@ export function ObjectivesTable({ state, oid, update, updateProject }: Props) {
                           setField(o.id!, "keyQuestions", e.target.value)
                         }
                       />
-                    </td>
-                    <td className="p-1">
+                    </TableCell>
+                    <TableCell>
                       <Textarea
                         rows={2}
                         placeholder="Who would be ideal?"
@@ -160,8 +168,8 @@ export function ObjectivesTable({ state, oid, update, updateProject }: Props) {
                           setField(o.id!, "participants", e.target.value)
                         }
                       />
-                    </td>
-                    <td className="p-1">
+                    </TableCell>
+                    <TableCell>
                       <Textarea
                         rows={2}
                         placeholder="Method + format"
@@ -170,8 +178,8 @@ export function ObjectivesTable({ state, oid, update, updateProject }: Props) {
                           setField(o.id!, "methodology", e.target.value)
                         }
                       />
-                    </td>
-                    <td className="p-1">
+                    </TableCell>
+                    <TableCell>
                       <Textarea
                         rows={2}
                         placeholder="e.g. 3 of 5 rate 4+"
@@ -180,8 +188,8 @@ export function ObjectivesTable({ state, oid, update, updateProject }: Props) {
                           setField(o.id!, "goalTargets", e.target.value)
                         }
                       />
-                    </td>
-                    <td className="p-1 text-center">
+                    </TableCell>
+                    <TableCell className="text-center">
                       <Button
                         type="button"
                         variant="ghost"
@@ -192,11 +200,11 @@ export function ObjectivesTable({ state, oid, update, updateProject }: Props) {
                       >
                         <Trash2 className="size-3.5" />
                       </Button>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </CardContent>

@@ -27,10 +27,10 @@ import type { Project } from "@/lib/types";
 
 const STATUS_CLS: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
-  planning: "bg-muted text-foreground",
-  progress: "bg-muted text-foreground",
-  done: "bg-muted text-foreground",
-  analysis: "bg-muted text-foreground",
+  planning: "bg-chart-3/15 text-chart-3",
+  progress: "bg-chart-4/20 text-chart-4",
+  done: "bg-chart-2/15 text-chart-2",
+  analysis: "bg-chart-3/15 text-chart-3",
 };
 
 export function ProjectCard({ project }: { project: Project }) {

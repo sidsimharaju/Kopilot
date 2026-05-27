@@ -66,9 +66,12 @@ export function SourcingPanel({ state, update }: Props) {
   const hex = useMemo(() => buildHexPrompt(state), [state]);
 
   return (
-    <Card>
+    <Card className="border-chart-3/30 bg-chart-3/[0.04]">
       <CardHeader>
-        <CardTitle>Sourcing helpers</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <Sparkles className="size-4 text-chart-3" />
+          Sourcing helpers
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="rovo">

@@ -185,10 +185,10 @@ Rules:
   }
 
   return (
-    <Card>
+    <Card className="border-chart-3/30 bg-chart-3/[0.04]">
       <CardHeader className="flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2 text-[14px]">
-          <Sparkles className="size-4" />
+          <Sparkles className="size-4 text-chart-3" />
           Quick start
         </CardTitle>
         <Button
