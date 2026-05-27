@@ -31,7 +31,7 @@ export function ConductEditor({ initial }: { initial: Project }) {
           <TabsTrigger value="manage">
             Manage{" "}
             {project.S.participants?.length ? (
-              <span className="ml-1 rounded-full bg-border-soft px-1.5 py-0.5 text-[10px] text-text-3">
+              <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
                 {project.S.participants.length}
               </span>
             ) : null}
@@ -40,7 +40,7 @@ export function ConductEditor({ initial }: { initial: Project }) {
 
         <TabsContent value="recruit" className="flex flex-col gap-3">
           {selectedCohorts.length === 0 ? (
-            <div className="rounded-md border border-dashed border-border bg-card px-6 py-10 text-center text-[13px] text-text-3">
+            <div className="rounded-md border border-dashed border-border bg-card px-6 py-10 text-center text-[13px] text-muted-foreground">
               No cohorts selected yet. Go to the Setup tab to choose who you&apos;re
               talking to first.
             </div>

@@ -67,14 +67,14 @@ export function ReportsPanel({ project }: { project: Project }) {
         {markdown ? (
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-text-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
                 {type === "full" ? "Full report" : "Summary report"}
               </div>
               <Button size="sm" variant="outline" onClick={copy} className="gap-1.5">
                 <Copy className="size-3.5" /> Copy markdown
               </Button>
             </div>
-            <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap rounded border border-border-soft bg-background p-3 text-[12.5px] leading-relaxed">
+            <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap rounded border border-border bg-background p-3 text-[12.5px] leading-relaxed">
               {markdown}
             </pre>
           </div>

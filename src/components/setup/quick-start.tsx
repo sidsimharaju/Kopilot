@@ -223,7 +223,7 @@ Rules:
             </div>
           </div>
 
-          <div className="border-t border-border-soft pt-3">
+          <div className="border-t border-border pt-3">
             <div className="mb-2 text-[12px] text-muted-foreground">
               Or upload an existing plan / report (.docx / .txt / .md) and I&apos;ll
               extract every field I can find.

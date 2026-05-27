@@ -71,7 +71,7 @@ export function ObjectivesTable({ state, oid, update, updateProject }: Props) {
       <CardHeader className="flex-row items-center justify-between">
         <div>
           <CardTitle>Learning objectives</CardTitle>
-          <p className="mt-1 text-[12px] text-text-3">
+          <p className="mt-1 text-[12px] text-muted-foreground">
             Fill each column to match the research plan template.
           </p>
         </div>
@@ -81,14 +81,14 @@ export function ObjectivesTable({ state, oid, update, updateProject }: Props) {
       </CardHeader>
       <CardContent>
         {objectives.length === 0 ? (
-          <div className="rounded border border-dashed border-border bg-background px-4 py-8 text-center text-[13px] text-text-3">
+          <div className="rounded border border-dashed border-border bg-background px-4 py-8 text-center text-[13px] text-muted-foreground">
             No objectives yet. Click <span className="font-medium">Add objective</span>.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1100px] border-collapse text-[12.5px]">
               <thead>
-                <tr className="text-left text-[10.5px] font-semibold uppercase tracking-[0.08em] text-text-3">
+                <tr className="text-left text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                   <th className="w-[100px] p-2">Priority</th>
                   <th className="p-2">Objective</th>
                   <th className="p-2">Hypothesis</th>
@@ -188,7 +188,7 @@ export function ObjectivesTable({ state, oid, update, updateProject }: Props) {
                         size="icon-sm"
                         onClick={() => setPendingDelete(o.id!)}
                         aria-label="Delete objective"
-                        className="text-text-3 hover:bg-destructive/10 hover:text-destructive"
+                        className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       >
                         <Trash2 className="size-3.5" />
                       </Button>

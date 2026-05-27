@@ -30,12 +30,12 @@ export function FindingsCards({
         <Card key={`${p.name ?? "anon"}-${idx}`}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <span className="flex size-7 items-center justify-center rounded-full bg-border-soft text-[10.5px] font-semibold text-text-2">
+              <span className="flex size-7 items-center justify-center rounded-full bg-muted text-[10.5px] font-semibold text-muted-foreground">
                 {initials(p.name)}
               </span>
               <span>{p.name || "Participant"}</span>
               {p.role ? (
-                <span className="text-[11.5px] font-normal text-text-3">
+                <span className="text-[11.5px] font-normal text-muted-foreground">
                   {p.role}
                 </span>
               ) : null}
@@ -45,10 +45,10 @@ export function FindingsCards({
             {(p.byObjective ?? []).map((f, i) => (
               <div
                 key={i}
-                className="rounded border border-border-soft bg-background p-3"
+                className="rounded border border-border bg-background p-3"
               >
                 <div className="mb-1.5 flex items-start justify-between gap-3">
-                  <div className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-text-3">
+                  <div className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
                     Objective {i + 1}
                   </div>
                   {f.confidence ? (
@@ -65,7 +65,7 @@ export function FindingsCards({
                 <div className="mb-2 text-[13px] font-medium">{f.objective}</div>
                 <div className="text-[12.5px] leading-relaxed text-foreground">
                   {f.finding || (
-                    <span className="text-text-3 italic">No finding yet.</span>
+                    <span className="text-muted-foreground italic">No finding yet.</span>
                   )}
                 </div>
                 {(f.quotes ?? []).length > 0 ? (
@@ -98,7 +98,7 @@ function SynthesisCard({ synthesis }: { synthesis: Synthesis }) {
       <CardContent className="flex flex-col gap-3 text-[13px]">
         {synthesis.tldr ? (
           <div>
-            <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-text-3">
+            <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
               TL;DR
             </div>
             <div className="leading-relaxed">{synthesis.tldr}</div>
@@ -106,23 +106,23 @@ function SynthesisCard({ synthesis }: { synthesis: Synthesis }) {
         ) : null}
         {synthesis.themes && synthesis.themes.length > 0 ? (
           <div>
-            <div className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-text-3">
+            <div className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
               Themes
             </div>
             <div className="flex flex-col gap-2">
               {synthesis.themes.map((t, i) => (
                 <div
                   key={i}
-                  className="rounded border border-border-soft bg-card p-2.5"
+                  className="rounded border border-border bg-card p-2.5"
                 >
                   <div className="font-medium">{t.name}</div>
                   {t.description ? (
-                    <div className="mt-1 text-[12.5px] leading-relaxed text-text-2">
+                    <div className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground">
                       {t.description}
                     </div>
                   ) : null}
                   {t.participants ? (
-                    <div className="mt-1.5 text-[11px] text-text-3">
+                    <div className="mt-1.5 text-[11px] text-muted-foreground">
                       {t.participants}
                     </div>
                   ) : null}
@@ -149,7 +149,7 @@ function BulletList({
   if (!items || items.length === 0) return null;
   return (
     <div>
-      <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-text-3">
+      <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
         {label}
       </div>
       <ul className="ml-4 flex list-disc flex-col gap-1 text-[12.5px] leading-relaxed">

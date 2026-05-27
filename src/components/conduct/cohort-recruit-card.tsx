@@ -64,11 +64,11 @@ export function CohortRecruitCard({ cohort, state, pid, update, updateProject }:
             <span className={cn("rounded-full px-2 py-0.5 text-[10.5px] font-semibold", COHORT_PILL[cohort])}>
               {COHORT_TITLE[cohort]}
             </span>
-            <span className="text-[11px] font-normal text-text-3">
+            <span className="text-[11px] font-normal text-muted-foreground">
               {participants.length} added
             </span>
           </CardTitle>
-          <p className="text-[12px] text-text-3">{COHORT_HELP[cohort]}</p>
+          <p className="text-[12px] text-muted-foreground">{COHORT_HELP[cohort]}</p>
         </div>
         {!showAdd ? (
           <Button size="sm" onClick={() => setShowAdd(true)} className="gap-1.5">
@@ -87,7 +87,7 @@ export function CohortRecruitCard({ cohort, state, pid, update, updateProject }:
         ) : null}
 
         {participants.length === 0 ? (
-          <div className="rounded border border-dashed border-border bg-background px-4 py-6 text-center text-[12.5px] text-text-3">
+          <div className="rounded border border-dashed border-border bg-background px-4 py-6 text-center text-[12.5px] text-muted-foreground">
             No one added yet.
           </div>
         ) : (
@@ -95,18 +95,18 @@ export function CohortRecruitCard({ cohort, state, pid, update, updateProject }:
             {participants.map((p) => (
               <div
                 key={p.id}
-                className="flex items-center gap-3 rounded border border-border-soft bg-background px-2.5 py-2"
+                className="flex items-center gap-3 rounded border border-border bg-background px-2.5 py-2"
               >
-                <span className="flex size-7 flex-shrink-0 items-center justify-center rounded-full bg-border-soft text-[10.5px] font-semibold text-text-2">
+                <span className="flex size-7 flex-shrink-0 items-center justify-center rounded-full bg-muted text-[10.5px] font-semibold text-muted-foreground">
                   {initials(p.name)}
                 </span>
                 <div className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate text-[13px] font-medium">{p.name}</span>
-                  <span className="truncate text-[11.5px] text-text-3">
+                  <span className="truncate text-[11.5px] text-muted-foreground">
                     {[p.role, p.company].filter(Boolean).join(" · ")}
                   </span>
                 </div>
-                <span className="hidden text-[11px] text-text-3 sm:inline">
+                <span className="hidden text-[11px] text-muted-foreground sm:inline">
                   {AUDIENCE_LABELS[p.audience ?? ""] ?? ""}
                 </span>
                 <span
@@ -120,7 +120,7 @@ export function CohortRecruitCard({ cohort, state, pid, update, updateProject }:
                 <button
                   type="button"
                   onClick={() => removeParticipant(p.id!)}
-                  className="inline-flex size-6 items-center justify-center rounded text-text-3 hover:bg-destructive/10 hover:text-destructive"
+                  className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                   aria-label="Remove participant"
                 >
                   <Trash2 className="size-3.5" />

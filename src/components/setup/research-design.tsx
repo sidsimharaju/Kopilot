@@ -54,7 +54,7 @@ export function ResearchDesign({ state, update }: Props) {
       <CardContent className="flex flex-col gap-5">
         <div className="flex flex-col gap-2">
           <Label>Methodology</Label>
-          <p className="text-[12px] text-text-3">
+          <p className="text-[12px] text-muted-foreground">
             One method for the whole study. Mixing methods means separate studies.
           </p>
           <ToggleGroup
@@ -78,11 +78,11 @@ export function ResearchDesign({ state, update }: Props) {
           </ToggleGroup>
         </div>
 
-        <hr className="border-border-soft" />
+        <hr className="border-border" />
 
         <div className="flex flex-col gap-2">
           <Label>Who are you talking to?</Label>
-          <p className="text-[12px] text-text-3">
+          <p className="text-[12px] text-muted-foreground">
             Select every cohort you plan to include. Aim for ~6 sessions total.
           </p>
           <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
@@ -125,7 +125,7 @@ function MethodOption({
       className="flex h-auto flex-col items-start gap-1 rounded-md border bg-card px-3 py-2.5 text-left whitespace-normal hover:bg-accent aria-pressed:border-foreground aria-pressed:bg-accent"
     >
       <div className="text-[13px] font-medium">{title}</div>
-      <div className="text-[11px] text-text-3">{subtitle}</div>
+      <div className="text-[11px] text-muted-foreground">{subtitle}</div>
     </ToggleGroupItem>
   );
 }
@@ -162,8 +162,8 @@ function CohortSelector({
       </span>
       <span className="flex flex-1 flex-col">
         <span className="text-[13px] font-medium">{COHORT_LABEL[cohort]}</span>
-        <span className="text-[11px] text-text-3">{COHORT_DESCRIPTION[cohort]}</span>
-        <span className="mt-1 text-[10.5px] font-medium text-text-2">
+        <span className="text-[11px] text-muted-foreground">{COHORT_DESCRIPTION[cohort]}</span>
+        <span className="mt-1 text-[10.5px] font-medium text-muted-foreground">
           {COHORT_COUNT[cohort]}
         </span>
       </span>
@@ -260,7 +260,7 @@ function CohortDetail({
             Paid via Respondent
           </span>
         ) : null}
-        <div className="ml-auto flex items-center gap-1.5 text-[11px] text-text-3">
+        <div className="ml-auto flex items-center gap-1.5 text-[11px] text-muted-foreground">
           <SessionInput
             label="min"
             value={sessions.min ?? ""}
@@ -280,8 +280,8 @@ function CohortDetail({
       </div>
 
       <div className="mb-3 flex flex-col gap-2">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-text-3">
-          Who to recruit <span className="font-normal text-text-3 normal-case tracking-normal">(pick any that apply)</span>
+        <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+          Who to recruit <span className="font-normal text-muted-foreground normal-case tracking-normal">(pick any that apply)</span>
         </div>
         <ToggleGroup
           multiple
@@ -306,7 +306,7 @@ function CohortDetail({
       {cohort !== "internal" ? (
         <>
           <div className="mb-3 flex flex-col gap-1.5">
-            <Label className="text-[11px] uppercase tracking-[0.06em] text-text-3">
+            <Label className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
               Criteria
             </Label>
             <Textarea
@@ -318,7 +318,7 @@ function CohortDetail({
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label className="text-[11px] uppercase tracking-[0.06em] text-text-3">
+            <Label className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
               {isPaid ? "Screener (required)" : "Do you need a screener?"}
             </Label>
             {!isPaid ? (
@@ -372,7 +372,7 @@ function SessionInput({
 }) {
   return (
     <span className="inline-flex items-center gap-1 rounded border border-input bg-card px-1.5 py-1">
-      <span className="text-[10px] uppercase tracking-wide text-text-3">{label}</span>
+      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</span>
       <Input
         type="number"
         min={0}

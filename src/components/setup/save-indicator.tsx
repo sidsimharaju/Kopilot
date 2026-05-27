@@ -6,7 +6,7 @@ import type { SaveStatus } from "@/lib/use-project";
 export function SaveIndicator({ status }: { status: SaveStatus }) {
   if (status === "saving") {
     return (
-      <span className="inline-flex items-center gap-1 text-[11px] text-text-3">
+      <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
         <Loader2 className="size-3 animate-spin" /> Saving…
       </span>
     );

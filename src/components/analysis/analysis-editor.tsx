@@ -61,7 +61,7 @@ export function AnalysisEditor({ initial }: { initial: Project }) {
           <CardContent className="flex flex-col items-center gap-3 px-6 py-10 text-center">
             <div className="text-[20px]">🔬</div>
             <div className="text-[15px] font-medium">Create analysis</div>
-            <div className="max-w-md text-[12.5px] text-text-3">
+            <div className="max-w-md text-[12.5px] text-muted-foreground">
               Once you have transcripts above, click below to map findings to your
               learning objectives and generate a cross-interview synthesis.
             </div>
@@ -74,7 +74,7 @@ export function AnalysisEditor({ initial }: { initial: Project }) {
               {analyzing ? "Analyzing…" : "Create analysis"}
             </Button>
             {!hasTranscripts ? (
-              <div className="text-[11.5px] text-text-3">
+              <div className="text-[11.5px] text-muted-foreground">
                 Add a transcript to a completed participant to enable analysis.
               </div>
             ) : null}

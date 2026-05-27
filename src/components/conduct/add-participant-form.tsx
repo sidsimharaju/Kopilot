@@ -98,7 +98,7 @@ export function AddParticipantForm({ cohort, withCSM, onAdd, onCancel }: Props) 
       ) : null}
 
       {cohort === "customer" && withCSM ? (
-        <div className="grid grid-cols-1 gap-2 border-t border-border-soft pt-2 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 border-t border-border pt-2 md:grid-cols-2">
           <div className="flex flex-col gap-1">
             <Label>CSM name</Label>
             <Input value={csmName} onChange={(e) => setCsmName(e.target.value)} placeholder="Sarah Smith" />

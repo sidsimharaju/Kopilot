@@ -46,7 +46,7 @@ export function Sidebar({
 
   return (
     <aside className="row-start-2 flex flex-col gap-px overflow-y-auto border-r border-border bg-card px-2 py-2.5">
-      <div className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-text-3">
+      <div className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
         Project
       </div>
       {items.map((item) => {
@@ -57,29 +57,29 @@ export function Sidebar({
             key={item.href}
             href={item.href}
             className={cn(
-              "group flex select-none items-center gap-2 rounded-[4px] px-[9px] py-[7px] text-[13px] text-text-2 transition-colors",
+              "group flex select-none items-center gap-2 rounded-[4px] px-[9px] py-[7px] text-[13px] text-muted-foreground transition-colors",
               "hover:bg-accent hover:text-foreground",
               active && "bg-accent font-medium text-foreground",
             )}
           >
             <Icon
               className={cn(
-                "size-[15px] flex-shrink-0 text-text-3 transition-colors",
-                "group-hover:text-text-2",
-                active && "text-text-2",
+                "size-[15px] flex-shrink-0 text-muted-foreground transition-colors",
+                "group-hover:text-muted-foreground",
+                active && "text-muted-foreground",
               )}
             />
             <span className="flex-1">{item.label}</span>
             {item.badge !== undefined ? (
-              <span className="ml-auto rounded-[10px] bg-border-soft px-1.5 py-px text-[11px] text-text-3">
+              <span className="ml-auto rounded-[10px] bg-muted px-1.5 py-px text-[11px] text-muted-foreground">
                 {item.badge}
               </span>
             ) : (
               <span
                 className={cn(
-                  "ml-auto size-1.5 flex-shrink-0 rounded-full border-[1.5px] border-text-4 transition-all",
+                  "ml-auto size-1.5 flex-shrink-0 rounded-full border-[1.5px] border-border transition-all",
                   item.done && "border-success bg-success",
-                  active && !item.done && "border-text-3",
+                  active && !item.done && "border-border",
                 )}
               />
             )}

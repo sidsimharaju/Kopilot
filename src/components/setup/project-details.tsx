@@ -163,7 +163,7 @@ function PersonField({
         >
           <SelectTrigger
             size="sm"
-            className="ml-auto h-6 border-0 bg-transparent px-1 text-[12px] text-text-2 shadow-none focus-visible:ring-0"
+            className="ml-auto h-6 border-0 bg-transparent px-1 text-[12px] text-muted-foreground shadow-none focus-visible:ring-0"
           >
             <SelectValue placeholder={`+ Add ${label.toLowerCase()}`} />
           </SelectTrigger>

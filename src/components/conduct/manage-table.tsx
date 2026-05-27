@@ -72,14 +72,14 @@ export function ManageTable({ state, update }: Props) {
       </CardHeader>
       <CardContent>
         {participants.length === 0 ? (
-          <div className="rounded border border-dashed border-border bg-background px-4 py-8 text-center text-[13px] text-text-3">
+          <div className="rounded border border-dashed border-border bg-background px-4 py-8 text-center text-[13px] text-muted-foreground">
             No participants yet. Add people in the Conduct tab.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[900px] border-collapse text-[12.5px]">
               <thead>
-                <tr className="text-left text-[10.5px] font-semibold uppercase tracking-[0.08em] text-text-3">
+                <tr className="text-left text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                   <th className="p-2">Name</th>
                   <th className="p-2">Role / Type</th>
                   <th className="p-2">Status</th>
@@ -91,17 +91,17 @@ export function ManageTable({ state, update }: Props) {
               </thead>
               <tbody>
                 {participants.map((p) => (
-                  <tr key={p.id} className="border-t border-border-soft align-top">
+                  <tr key={p.id} className="border-t border-border align-top">
                     <td className="p-2">
                       <div className="flex items-center gap-2">
-                        <span className="flex size-7 flex-shrink-0 items-center justify-center rounded-full bg-border-soft text-[10.5px] font-semibold text-text-2">
+                        <span className="flex size-7 flex-shrink-0 items-center justify-center rounded-full bg-muted text-[10.5px] font-semibold text-muted-foreground">
                           {initials(p.name)}
                         </span>
                         <div className="flex min-w-0 flex-col">
                           <span className="truncate text-[12.5px] font-medium">
                             {p.name}
                           </span>
-                          <span className="truncate text-[11px] text-text-3">
+                          <span className="truncate text-[11px] text-muted-foreground">
                             {p.company}
                           </span>
                         </div>
@@ -182,7 +182,7 @@ export function ManageTable({ state, update }: Props) {
                         size="icon-sm"
                         onClick={() => remove(p.id!)}
                         aria-label="Remove participant"
-                        className="text-text-3 hover:bg-destructive/10 hover:text-destructive"
+                        className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       >
                         <Trash2 className="size-3.5" />
                       </Button>
@@ -213,7 +213,7 @@ function Metric({
       : "text-foreground";
   return (
     <div className="rounded-md border border-border bg-card px-3 py-2.5">
-      <div className="text-[10.5px] font-medium uppercase tracking-[0.06em] text-text-3">
+      <div className="text-[10.5px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
         {label}
       </div>
       <div className={cn("text-[22px] font-semibold tabular-nums", cls)}>{value}</div>

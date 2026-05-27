@@ -39,14 +39,14 @@ export function TranscriptsPanel({ state, update }: Props) {
     <Card>
       <CardHeader>
         <CardTitle>Transcripts</CardTitle>
-        <p className="text-[12px] text-text-3">
+        <p className="text-[12px] text-muted-foreground">
           Paste a transcript for each completed session. Analysis uses everything
           marked &ldquo;completed&rdquo; with text.
         </p>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
         {participants.length === 0 ? (
-          <div className="rounded border border-dashed border-border bg-background px-4 py-6 text-center text-[12.5px] text-text-3">
+          <div className="rounded border border-dashed border-border bg-background px-4 py-6 text-center text-[12.5px] text-muted-foreground">
             No participants yet. Add some in the Conduct tab.
           </div>
         ) : (
@@ -80,7 +80,7 @@ function TranscriptRow({
   const status = participant.status ?? "identified";
 
   return (
-    <div className="rounded border border-border-soft bg-background">
+    <div className="rounded border border-border bg-background">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -88,16 +88,16 @@ function TranscriptRow({
       >
         <ChevronRight
           className={cn(
-            "size-3.5 flex-shrink-0 text-text-3 transition-transform",
+            "size-3.5 flex-shrink-0 text-muted-foreground transition-transform",
             open && "rotate-90",
           )}
         />
-        <span className="flex size-7 flex-shrink-0 items-center justify-center rounded-full bg-border-soft text-[10.5px] font-semibold text-text-2">
+        <span className="flex size-7 flex-shrink-0 items-center justify-center rounded-full bg-muted text-[10.5px] font-semibold text-muted-foreground">
           {initials(participant.name)}
         </span>
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-[13px] font-medium">{participant.name}</span>
-          <span className="truncate text-[11px] text-text-3">
+          <span className="truncate text-[11px] text-muted-foreground">
             {[participant.role, participant.company].filter(Boolean).join(" · ")}
           </span>
         </div>
@@ -109,12 +109,12 @@ function TranscriptRow({
         >
           {STATUS_LABEL[status]}
         </span>
-        <span className="text-[10.5px] tabular-nums text-text-3">
+        <span className="text-[10.5px] tabular-nums text-muted-foreground">
           {hasTranscript ? `${(participant.transcript ?? "").length.toLocaleString()} chars` : "no transcript"}
         </span>
       </button>
       {open ? (
-        <div className="border-t border-border-soft p-3 flex flex-col gap-2">
+        <div className="border-t border-border p-3 flex flex-col gap-2">
           <Textarea
             rows={8}
             placeholder="Paste the transcript here. The analysis will use the first ~5,000 characters."
