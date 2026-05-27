@@ -1,8 +1,16 @@
 "use client";
 
 import { Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   COHORT_LABEL_SHORT,
   COHORT_PILL,
@@ -113,22 +121,29 @@ export function ManageTable({ state, update }: Props) {
                       </div>
                     </td>
                     <td className="p-2">
-                      <select
+                      <Select
                         value={p.status ?? "identified"}
-                        onChange={(e) =>
-                          setField(p.id!, "status", e.target.value as ParticipantStatus)
-                        }
-                        className={cn(
-                          "rounded-full border-0 px-2 py-0.5 text-[10.5px] font-medium",
-                          STATUS_TONE[p.status ?? "identified"],
-                        )}
+                        onValueChange={(v) => {
+                          if (v) setField(p.id!, "status", v as ParticipantStatus);
+                        }}
                       >
-                        {STATUS_VALUES.map((s) => (
-                          <option key={s} value={s}>
-                            {STATUS_LABEL[s]}
-                          </option>
-                        ))}
-                      </select>
+                        <SelectTrigger
+                          size="sm"
+                          className={cn(
+                            "h-6 rounded-full border-0 px-2 py-0.5 text-[10.5px] font-medium shadow-none focus-visible:ring-0",
+                            STATUS_TONE[p.status ?? "identified"],
+                          )}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STATUS_VALUES.map((s) => (
+                            <SelectItem key={s} value={s}>
+                              {STATUS_LABEL[s]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </td>
                     <td className="p-2">
                       <Input
@@ -161,14 +176,16 @@ export function ManageTable({ state, update }: Props) {
                       />
                     </td>
                     <td className="p-2 text-center">
-                      <button
+                      <Button
                         type="button"
-                        className="inline-flex size-7 items-center justify-center rounded text-text-3 hover:bg-destructive/10 hover:text-destructive"
+                        variant="ghost"
+                        size="icon-sm"
                         onClick={() => remove(p.id!)}
                         aria-label="Remove participant"
+                        className="text-text-3 hover:bg-destructive/10 hover:text-destructive"
                       >
                         <Trash2 className="size-3.5" />
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))}

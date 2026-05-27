@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import {
   CHIPS_CUSTOMERS,
@@ -56,20 +57,25 @@ export function ResearchDesign({ state, update }: Props) {
           <p className="text-[12px] text-text-3">
             One method for the whole study. Mixing methods means separate studies.
           </p>
-          <div className="grid grid-cols-2 gap-2">
-            <MethodButton
-              active={methodology === "usability"}
+          <ToggleGroup
+            value={[methodology]}
+            onValueChange={(vals) => {
+              const v = vals[0];
+              if (v) setMethod(v as "usability" | "discovery");
+            }}
+            className="grid w-full grid-cols-2 gap-2"
+          >
+            <MethodOption
+              value="usability"
               title="Moderated usability test"
               subtitle="Watch someone use something"
-              onClick={() => setMethod("usability")}
             />
-            <MethodButton
-              active={methodology === "discovery"}
+            <MethodOption
+              value="discovery"
               title="Discovery interview"
               subtitle="Understand how someone thinks"
-              onClick={() => setMethod("discovery")}
             />
-          </div>
+          </ToggleGroup>
         </div>
 
         <hr className="border-border-soft" />
@@ -103,31 +109,24 @@ export function ResearchDesign({ state, update }: Props) {
   );
 }
 
-function MethodButton({
-  active,
+function MethodOption({
+  value,
   title,
   subtitle,
-  onClick,
 }: {
-  active: boolean;
+  value: string;
   title: string;
   subtitle: string;
-  onClick: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "flex flex-col items-start gap-1 rounded-md border bg-card px-3 py-2.5 text-left transition-colors",
-        active
-          ? "border-primary bg-brand-soft"
-          : "border-border hover:border-text-4",
-      )}
+    <ToggleGroupItem
+      value={value}
+      variant="outline"
+      className="flex h-auto flex-col items-start gap-1 rounded-md border bg-card px-3 py-2.5 text-left whitespace-normal hover:border-text-4 hover:bg-card aria-pressed:border-primary aria-pressed:bg-brand-soft"
     >
       <div className="text-[13px] font-medium">{title}</div>
       <div className="text-[11px] text-text-3">{subtitle}</div>
-    </button>
+    </ToggleGroupItem>
   );
 }
 
@@ -212,16 +211,12 @@ function CohortDetail({
     });
   }
 
-  function toggleChip(value: string) {
+  function setChipSelections(values: string[]) {
     if (cohort === "internal") return;
     update((s) => {
       const all = s.chipSelections ?? { customers: [], noncustomers: [] };
       const key = cohort as "customers" | "noncustomers";
-      const cur = all[key] ?? [];
-      const next = cur.includes(value)
-        ? cur.filter((v) => v !== value)
-        : [...cur, value];
-      return { ...s, chipSelections: { ...all, [key]: next } };
+      return { ...s, chipSelections: { ...all, [key]: values } };
     });
   }
 
@@ -288,26 +283,24 @@ function CohortDetail({
         <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-text-3">
           Who to recruit <span className="font-normal text-text-3 normal-case tracking-normal">(pick any that apply)</span>
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          {CHIPS[cohort].map((chip) => {
-            const active = chipSelections.includes(chip.value);
-            return (
-              <button
-                key={chip.value}
-                type="button"
-                onClick={() => toggleChip(chip.value)}
-                className={cn(
-                  "rounded-full border px-2.5 py-1 text-[11.5px] transition-colors",
-                  active
-                    ? "border-primary bg-brand-soft text-primary"
-                    : "border-border bg-card text-text-2 hover:border-text-4",
-                )}
-              >
-                {chip.label}
-              </button>
-            );
-          })}
-        </div>
+        <ToggleGroup
+          multiple
+          value={chipSelections}
+          onValueChange={setChipSelections}
+          className="flex flex-wrap gap-1.5"
+        >
+          {CHIPS[cohort].map((chip) => (
+            <ToggleGroupItem
+              key={chip.value}
+              value={chip.value}
+              variant="outline"
+              size="sm"
+              className="rounded-full border bg-card px-2.5 py-1 text-[11.5px] text-text-2 hover:border-text-4 hover:bg-card aria-pressed:border-primary aria-pressed:bg-brand-soft aria-pressed:text-primary"
+            >
+              {chip.label}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
       </div>
 
       {cohort !== "internal" ? (
@@ -329,20 +322,29 @@ function CohortDetail({
               {isPaid ? "Screener (required)" : "Do you need a screener?"}
             </Label>
             {!isPaid ? (
-              <div className="flex gap-2">
-                <ScreenerYN
-                  active={screenerChoice === "yes"}
-                  onClick={() => setScreenerChoice("yes")}
+              <ToggleGroup
+                value={screenerChoice ? [screenerChoice] : []}
+                onValueChange={(vals) => {
+                  const v = vals[0];
+                  if (v === "yes" || v === "no") setScreenerChoice(v);
+                }}
+                className="flex gap-2"
+              >
+                <ToggleGroupItem
+                  value="yes"
+                  variant="outline"
+                  className="h-auto rounded border bg-card px-3 py-1.5 text-[12px] text-text-2 hover:border-text-4 hover:bg-card aria-pressed:border-primary aria-pressed:bg-brand-soft aria-pressed:text-primary"
                 >
                   Yes, I need a screener
-                </ScreenerYN>
-                <ScreenerYN
-                  active={screenerChoice === "no"}
-                  onClick={() => setScreenerChoice("no")}
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="no"
+                  variant="outline"
+                  className="h-auto rounded border bg-card px-3 py-1.5 text-[12px] text-text-2 hover:border-text-4 hover:bg-card aria-pressed:border-primary aria-pressed:bg-brand-soft aria-pressed:text-primary"
                 >
                   No, job title is enough
-                </ScreenerYN>
-              </div>
+                </ToggleGroupItem>
+              </ToggleGroup>
             ) : null}
             {isPaid || screenerChoice === "yes" ? (
               <Textarea
@@ -382,27 +384,3 @@ function SessionInput({
   );
 }
 
-function ScreenerYN({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "rounded border px-3 py-1.5 text-[12px] transition-colors",
-        active
-          ? "border-primary bg-brand-soft text-primary"
-          : "border-border bg-card text-text-2 hover:border-text-4",
-      )}
-    >
-      {children}
-    </button>
-  );
-}

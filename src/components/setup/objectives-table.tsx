@@ -14,6 +14,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { PRIORITIES } from "@/lib/constants";
 import type { Objective, ObjectivePriority, Project, ProjectState } from "@/lib/types";
@@ -96,17 +103,23 @@ export function ObjectivesTable({ state, oid, update, updateProject }: Props) {
                 {objectives.map((o) => (
                   <tr key={o.id} className="align-top">
                     <td className="p-1">
-                      <select
+                      <Select
                         value={o.priority ?? "Must"}
-                        onChange={(e) =>
-                          setField(o.id!, "priority", e.target.value)
-                        }
-                        className="w-full rounded border border-input bg-card px-2 py-1.5 text-[12px]"
+                        onValueChange={(v) => {
+                          if (v) setField(o.id!, "priority", v);
+                        }}
                       >
-                        {PRIORITIES.map((p) => (
-                          <option key={p}>{p}</option>
-                        ))}
-                      </select>
+                        <SelectTrigger size="sm" className="w-full text-[12px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PRIORITIES.map((p) => (
+                            <SelectItem key={p} value={p}>
+                              {p}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </td>
                     <td className="p-1">
                       <Textarea
@@ -169,14 +182,16 @@ export function ObjectivesTable({ state, oid, update, updateProject }: Props) {
                       />
                     </td>
                     <td className="p-1 text-center">
-                      <button
+                      <Button
                         type="button"
-                        className="inline-flex size-7 items-center justify-center rounded text-text-3 hover:bg-destructive/10 hover:text-destructive"
+                        variant="ghost"
+                        size="icon-sm"
                         onClick={() => setPendingDelete(o.id!)}
                         aria-label="Delete objective"
+                        className="text-text-3 hover:bg-destructive/10 hover:text-destructive"
                       >
                         <Trash2 className="size-3.5" />
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))}

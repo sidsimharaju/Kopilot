@@ -4,6 +4,13 @@ import { X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { DESIGNERS, RESEARCHERS } from "@/lib/constants";
 import type { ProjectState } from "@/lib/types";
@@ -155,20 +162,26 @@ function PersonField({
             </button>
           </span>
         ))}
-        <select
-          className="ml-auto bg-transparent text-[12px] text-text-2 outline-none"
+        <Select
           value=""
-          onChange={(e) => {
-            const v = e.target.value;
+          onValueChange={(v) => {
             if (v) onAdd(v);
-            e.currentTarget.value = "";
           }}
         >
-          <option value="">+ Add {label.toLowerCase()}</option>
-          {available.map((n) => (
-            <option key={n}>{n}</option>
-          ))}
-        </select>
+          <SelectTrigger
+            size="sm"
+            className="ml-auto h-6 border-0 bg-transparent px-1 text-[12px] text-text-2 shadow-none focus-visible:ring-0"
+          >
+            <SelectValue placeholder={`+ Add ${label.toLowerCase()}`} />
+          </SelectTrigger>
+          <SelectContent>
+            {available.map((n) => (
+              <SelectItem key={n} value={n}>
+                {n}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );
