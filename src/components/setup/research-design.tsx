@@ -195,10 +195,7 @@ function CohortDetail({
   update: (mut: (s: ProjectState) => ProjectState) => void;
 }) {
   const sessions = state.sessions?.[cohort] ?? {};
-  const chipSelections =
-    cohort === "internal"
-      ? []
-      : (state.chipSelections?.[cohort as "customers" | "noncustomers"] ?? []);
+  const chipSelections = state.chipSelections?.[cohort] ?? [];
   const criteria =
     cohort === "internal"
       ? ""
@@ -226,11 +223,9 @@ function CohortDetail({
   }
 
   function setChipSelections(values: string[]) {
-    if (cohort === "internal") return;
     update((s) => {
-      const all = s.chipSelections ?? { customers: [], noncustomers: [] };
-      const key = cohort as "customers" | "noncustomers";
-      return { ...s, chipSelections: { ...all, [key]: values } };
+      const all = s.chipSelections ?? {};
+      return { ...s, chipSelections: { ...all, [cohort]: values } };
     });
   }
 

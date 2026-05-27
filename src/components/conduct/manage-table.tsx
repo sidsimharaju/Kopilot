@@ -5,7 +5,6 @@ import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardAction,
   CardContent,
   CardHeader,
   CardTitle,
@@ -89,10 +88,10 @@ export function ManageTable({ state, update }: Props) {
           <Metric label="Scheduled" value={metrics.scheduled} />
           <Metric label="Needs action" value={metrics.pending} />
         </div>
-        <CardTitle className="mt-4">Session participants</CardTitle>
-        <CardAction className="mt-4">
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <CardTitle>Session participants</CardTitle>
           <MessagesPanel state={state} update={update} />
-        </CardAction>
+        </div>
       </CardHeader>
       <CardContent>
         {participants.length === 0 ? (

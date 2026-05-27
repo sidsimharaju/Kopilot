@@ -73,7 +73,7 @@ export type ProjectState = {
   criteria?: { customers?: string; noncustomers?: string };
   screener?: { customers?: string; noncustomers?: string };
   screenerChoice?: { customers?: string; noncustomers?: string };
-  chipSelections?: { customers?: string[]; noncustomers?: string[] };
+  chipSelections?: { internal?: string[]; customers?: string[]; noncustomers?: string[] };
   championsLink?: string;
   customerLink?: string;
   objectives?: Objective[];
