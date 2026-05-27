@@ -4,6 +4,7 @@ import { useProject } from "@/lib/use-project";
 import type { Project } from "@/lib/types";
 import { ObjectivesTable } from "./objectives-table";
 import { ProjectDetails } from "./project-details";
+import { QuickStart } from "./quick-start";
 import { ResearchDesign } from "./research-design";
 import { SaveIndicator } from "./save-indicator";
 
@@ -14,6 +15,7 @@ export function SetupEditor({ initial }: { initial: Project }) {
       <div className="flex items-center justify-end h-5">
         <SaveIndicator status={status} />
       </div>
+      <QuickStart state={project.S} update={update} updateProject={updateProject} />
       <ProjectDetails state={project.S} update={update} />
       <ObjectivesTable
         state={project.S}
