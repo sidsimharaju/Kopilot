@@ -82,8 +82,17 @@ export type ProjectState = {
   analysisResult?: AnalysisResult | null;
   synthesisResult?: Synthesis | null;
   synthesisRich?: string;
+  messageTemplates?: MessageTemplates;
   [k: string]: unknown;
 };
+
+export type MessageTemplateKind =
+  | "slackInternal"
+  | "slackCsm"
+  | "emailCustomer"
+  | "emailNoncustomer";
+
+export type MessageTemplates = Partial<Record<MessageTemplateKind, string>>;
 
 export type FindingConfidence = "high" | "medium" | "low";
 

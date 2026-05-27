@@ -1,8 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -11,7 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { DraftMessageSheet } from "./draft-message-sheet";
+import { EditParticipantSheet } from "./edit-participant-sheet";
+import { MessagesPanel } from "./messages-panel";
 import {
   COHORT_LABEL_SHORT,
   COHORT_PILL,
@@ -23,6 +31,7 @@ import {
 import { cn } from "@/lib/utils";
 import type {
   Participant,
+  ParticipantCohort,
   ParticipantStatus,
   ProjectState,
 } from "@/lib/types";
@@ -33,7 +42,9 @@ type Props = {
 };
 
 export function ManageTable({ state, update }: Props) {
+  const [editingId, setEditingId] = useState<number | null>(null);
   const participants = state.participants ?? [];
+  const editing = participants.find((p) => p.id === editingId) ?? null;
 
   const metrics = {
     total: participants.length,
@@ -53,6 +64,15 @@ export function ManageTable({ state, update }: Props) {
     }));
   }
 
+  function saveEdit(id: number, data: Omit<Participant, "id">) {
+    update((s) => ({
+      ...s,
+      participants: (s.participants ?? []).map((p) =>
+        p.id === id ? { ...p, ...data, id } : p,
+      ),
+    }));
+  }
+
   function remove(id: number) {
     update((s) => ({
       ...s,
@@ -65,11 +85,14 @@ export function ManageTable({ state, update }: Props) {
       <CardHeader>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Metric label="Total" value={metrics.total} />
-          <Metric label="Completed" value={metrics.completed} tone="success" />
+          <Metric label="Completed" value={metrics.completed} />
           <Metric label="Scheduled" value={metrics.scheduled} />
-          <Metric label="Needs action" value={metrics.pending} tone="warning" />
+          <Metric label="Needs action" value={metrics.pending} />
         </div>
         <CardTitle className="mt-4">Session participants</CardTitle>
+        <CardAction className="mt-4">
+          <MessagesPanel state={state} update={update} />
+        </CardAction>
       </CardHeader>
       <CardContent>
         {participants.length === 0 ? (
@@ -94,22 +117,30 @@ export function ManageTable({ state, update }: Props) {
                 {participants.map((p) => (
                   <tr key={p.id} className="border-t border-border align-top">
                     <td className="p-2">
-                      <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditingId(p.id!)}
+                        className="group flex w-full items-center gap-2 rounded-md px-1 py-0.5 text-left transition-colors hover:bg-accent"
+                      >
                         <span className="flex size-7 flex-shrink-0 items-center justify-center rounded-full bg-muted text-[10.5px] font-semibold text-muted-foreground">
                           {initials(p.name)}
                         </span>
                         <div className="flex min-w-0 flex-col">
-                          <span className="truncate text-[12.5px] font-medium">
+                          <span className="truncate text-[12.5px] font-medium group-hover:underline">
                             {p.name}
                           </span>
                           <span className="truncate text-[11px] text-muted-foreground">
                             {p.company}
                           </span>
                         </div>
-                      </div>
+                      </button>
                     </td>
                     <td className="p-2">
-                      <div className="flex flex-col gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setEditingId(p.id!)}
+                        className="flex w-full flex-col items-start gap-1 rounded-md px-1 py-0.5 text-left transition-colors hover:bg-accent"
+                      >
                         <span className="truncate text-[12px]">{p.role || "—"}</span>
                         <span
                           className={cn(
@@ -119,7 +150,7 @@ export function ManageTable({ state, update }: Props) {
                         >
                           {COHORT_LABEL_SHORT[p.cohort ?? "internal"]}
                         </span>
-                      </div>
+                      </button>
                     </td>
                     <td className="p-2">
                       <Select
@@ -184,23 +215,16 @@ export function ManageTable({ state, update }: Props) {
                       />
                     </td>
                     <td className="p-2 text-center">
-                      <div className="flex items-center justify-end gap-1">
-                        <DraftMessageSheet
-                          participant={p}
-                          state={state}
-                          onSave={(msg) => setField(p.id!, "msg1", msg)}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => remove(p.id!)}
-                          aria-label="Remove participant"
-                          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => remove(p.id!)}
+                        aria-label="Remove participant"
+                        className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -209,6 +233,18 @@ export function ManageTable({ state, update }: Props) {
           </div>
         )}
       </CardContent>
+      {editing ? (
+        <EditParticipantSheet
+          participant={editing}
+          cohort={(editing.cohort ?? "internal") as ParticipantCohort}
+          withCSM={editing.cohort === "customer" && Boolean(editing.hasCSM)}
+          open={editingId !== null}
+          onOpenChange={(open) => {
+            if (!open) setEditingId(null);
+          }}
+          onSave={(data) => saveEdit(editing.id!, data)}
+        />
+      ) : null}
     </Card>
   );
 }
@@ -216,22 +252,16 @@ export function ManageTable({ state, update }: Props) {
 function Metric({
   label,
   value,
-  tone,
 }: {
   label: string;
   value: number;
-  tone?: "success" | "warning";
 }) {
-  const cls =
-    tone === "success" || tone === "warning"
-      ? "text-foreground"
-      : "text-foreground";
   return (
     <div className="rounded-md border border-border bg-card px-3 py-2.5">
       <div className="text-[10.5px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
         {label}
       </div>
-      <div className={cn("text-[22px] font-semibold tabular-nums", cls)}>{value}</div>
+      <div className="text-[22px] font-semibold tabular-nums">{value}</div>
     </div>
   );
 }

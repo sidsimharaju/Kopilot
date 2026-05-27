@@ -107,7 +107,7 @@ export function ObjectivesTable({ state, oid, update, updateProject }: Props) {
                   <TableHead className="w-[110px]">Priority</TableHead>
                   <TableHead>Objective</TableHead>
                   <TableHead>Hypothesis</TableHead>
-                  <TableHead>Key questions</TableHead>
+                  <TableHead className="min-w-[280px]">Key questions</TableHead>
                   <TableHead>Target participants</TableHead>
                   <TableHead>Methodology</TableHead>
                   <TableHead>Goal targets</TableHead>
@@ -144,7 +144,7 @@ export function ObjectivesTable({ state, oid, update, updateProject }: Props) {
                         onChange={(e) =>
                           setField(o.id!, "objective", e.target.value)
                         }
-                        className="h-24 resize-none"
+                        className="min-h-20 [field-sizing:content]"
                       />
                     </TableCell>
                     <TableCell>
@@ -155,7 +155,7 @@ export function ObjectivesTable({ state, oid, update, updateProject }: Props) {
                         onChange={(e) =>
                           setField(o.id!, "hypothesis", e.target.value)
                         }
-                        className="h-24 resize-none"
+                        className="min-h-20 [field-sizing:content]"
                       />
                     </TableCell>
                     <TableCell>
@@ -181,7 +181,7 @@ export function ObjectivesTable({ state, oid, update, updateProject }: Props) {
                             });
                           }
                         }}
-                        className="h-24 resize-none"
+                        className="min-h-20 [field-sizing:content]"
                       />
                     </TableCell>
                     <TableCell>
@@ -192,7 +192,7 @@ export function ObjectivesTable({ state, oid, update, updateProject }: Props) {
                         onChange={(e) =>
                           setField(o.id!, "participants", e.target.value)
                         }
-                        className="h-24 resize-none"
+                        className="min-h-20 [field-sizing:content]"
                       />
                     </TableCell>
                     <TableCell>
@@ -203,7 +203,7 @@ export function ObjectivesTable({ state, oid, update, updateProject }: Props) {
                         onChange={(e) =>
                           setField(o.id!, "methodology", e.target.value)
                         }
-                        className="h-24 resize-none"
+                        className="min-h-20 [field-sizing:content]"
                       />
                     </TableCell>
                     <TableCell>
@@ -214,7 +214,7 @@ export function ObjectivesTable({ state, oid, update, updateProject }: Props) {
                         onChange={(e) =>
                           setField(o.id!, "goalTargets", e.target.value)
                         }
-                        className="h-24 resize-none"
+                        className="min-h-20 [field-sizing:content]"
                       />
                     </TableCell>
                     <TableCell className="text-center">
