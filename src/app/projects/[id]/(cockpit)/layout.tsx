@@ -27,7 +27,7 @@ export default async function CockpitLayout({ children, params }: Props) {
 
   return (
     <div className="grid h-screen grid-cols-[200px_1fr] grid-rows-[50px_1fr] overflow-hidden">
-      <TopBar title={title} projectId={id} shareToken={project.shareToken ?? null} />
+      <TopBar title={title} project={project} shareToken={project.shareToken ?? null} />
       <Sidebar
         projectId={id}
         setupDone={setupDone}

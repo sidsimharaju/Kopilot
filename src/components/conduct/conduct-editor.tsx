@@ -5,6 +5,7 @@ import { useProject } from "@/lib/use-project";
 import type { Cohort, Project, ParticipantCohort } from "@/lib/types";
 import { CohortRecruitCard } from "./cohort-recruit-card";
 import { ManageTable } from "./manage-table";
+import { SourcingPanel } from "./sourcing-panel";
 import { SaveIndicator } from "@/components/setup/save-indicator";
 
 const COHORT_TO_PARTICIPANT: Record<Cohort, ParticipantCohort> = {
@@ -39,6 +40,7 @@ export function ConductEditor({ initial }: { initial: Project }) {
         </TabsList>
 
         <TabsContent value="recruit" className="flex flex-col gap-3">
+          <SourcingPanel state={project.S} update={update} />
           {selectedCohorts.length === 0 ? (
             <div className="rounded-md border border-dashed border-border bg-card px-6 py-10 text-center text-[13px] text-muted-foreground">
               No cohorts selected yet. Go to the Setup tab to choose who you&apos;re

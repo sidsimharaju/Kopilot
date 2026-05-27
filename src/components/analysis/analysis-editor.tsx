@@ -97,6 +97,7 @@ export function AnalysisEditor({ initial }: { initial: Project }) {
           <FindingsCards
             analysis={project.S.analysisResult}
             synthesis={project.S.synthesisResult}
+            update={update}
           />
         </>
       )}

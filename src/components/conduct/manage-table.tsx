@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DraftMessageSheet } from "./draft-message-sheet";
 import {
   COHORT_LABEL_SHORT,
   COHORT_PILL,
@@ -176,16 +177,23 @@ export function ManageTable({ state, update }: Props) {
                       />
                     </td>
                     <td className="p-2 text-center">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => remove(p.id!)}
-                        aria-label="Remove participant"
-                        className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <DraftMessageSheet
+                          participant={p}
+                          state={state}
+                          onSave={(msg) => setField(p.id!, "msg1", msg)}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => remove(p.id!)}
+                          aria-label="Remove participant"
+                          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}

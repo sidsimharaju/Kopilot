@@ -1,11 +1,15 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { useState } from "react";
+import { Check, Sparkles } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { callAgentJSON } from "@/lib/agent";
 import { cn } from "@/lib/utils";
 import {
   CHIPS_CUSTOMERS,
@@ -347,17 +351,91 @@ function CohortDetail({
               </ToggleGroup>
             ) : null}
             {isPaid || screenerChoice === "yes" ? (
-              <Textarea
-                rows={4}
-                placeholder="Screener questions will appear here. Edit freely."
-                value={screener}
-                onChange={(e) => setScreener(e.target.value)}
-              />
+              <div className="flex flex-col gap-2">
+                <Textarea
+                  rows={4}
+                  placeholder="Screener questions will appear here. Edit freely."
+                  value={screener}
+                  onChange={(e) => setScreener(e.target.value)}
+                />
+                <GenerateScreenerButton
+                  projectName={state.projectName}
+                  criteria={criteria}
+                  isPaid={isPaid}
+                  onResult={setScreener}
+                />
+              </div>
             ) : null}
           </div>
         </>
       ) : null}
     </div>
+  );
+}
+
+function GenerateScreenerButton({
+  projectName,
+  criteria,
+  isPaid,
+  onResult,
+}: {
+  projectName: string | undefined;
+  criteria: string;
+  isPaid: boolean;
+  onResult: (text: string) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+
+  async function run() {
+    if (!criteria.trim()) {
+      toast.error("Add participant criteria first.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const prompt = `Write a short research screener, 4-6 questions to qualify participants before a UX study session. Mix of multiple choice and short answer. No em dashes, no corporate language.
+
+What needs to be verified: ${criteria}
+${projectName ? "Study: " + projectName : ""}
+
+Format each question as:
+Q: [question text]
+Type: [Multiple choice / Short answer]
+[Options if multiple choice]
+[Pass / fail criteria in brackets]
+
+Return JSON: {"result":"screener questions as plain text"}`;
+      const data = await callAgentJSON<{ result?: string }>(prompt, { max_tokens: 600 });
+      if (data.result) {
+        onResult(data.result);
+        toast.success(
+          isPaid
+            ? "Share with Shikha for sign-off before sending"
+            : "Review before sending",
+        );
+      } else {
+        toast.error("No screener returned");
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      toast.error(`Generate failed: ${msg}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={run}
+      disabled={busy}
+      className="w-fit gap-1.5"
+    >
+      <Sparkles className="size-3.5" />
+      {busy ? "Generating…" : "Generate screener"}
+    </Button>
   );
 }
 

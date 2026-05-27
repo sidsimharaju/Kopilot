@@ -1,17 +1,19 @@
 import Link from "next/link";
-import { Calendar, Eye, Share2 } from "lucide-react";
+import { Calendar, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PreviewSheet } from "./preview-sheet";
+import type { Project } from "@/lib/types";
 
 type TopBarProps = {
   title?: string;
-  projectId?: string;
+  project?: Project;
   shareToken?: string | null;
   userInitials?: string;
 };
 
 export function TopBar({
   title = "Untitled research",
-  projectId,
+  project,
   shareToken,
   userInitials = "SL",
 }: TopBarProps) {
@@ -30,12 +32,7 @@ export function TopBar({
         {title}
       </h1>
       <div className="flex items-center gap-2 pr-4">
-        {projectId ? (
-          <Button variant="outline" size="sm" className="h-[30px] gap-1.5">
-            <Eye className="size-3.5" />
-            Preview
-          </Button>
-        ) : null}
+        {project ? <PreviewSheet project={project} /> : null}
         {shareToken ? (
           <Button variant="outline" size="sm" className="h-[30px] gap-1.5">
             <Share2 className="size-3.5" />
