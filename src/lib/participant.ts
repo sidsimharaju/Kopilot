@@ -21,12 +21,12 @@ export const STATUS_LABEL: Record<ParticipantStatus, string> = {
 };
 
 export const STATUS_TONE: Record<ParticipantStatus, string> = {
-  identified: "bg-border-soft text-text-3",
-  contacted: "bg-blue-100 text-blue-700",
-  scheduled: "bg-amber-100 text-amber-800",
-  completed: "bg-emerald-100 text-emerald-700",
-  dropped: "bg-border-soft text-text-3",
-  "no-show": "bg-red-100 text-red-700",
+  identified: "bg-muted text-muted-foreground",
+  contacted: "bg-muted text-foreground",
+  scheduled: "bg-muted text-foreground",
+  completed: "bg-foreground text-background",
+  dropped: "bg-muted text-muted-foreground",
+  "no-show": "bg-destructive/10 text-destructive",
 };
 
 export const STATUS_VALUES: ParticipantStatus[] = [
@@ -39,9 +39,9 @@ export const STATUS_VALUES: ParticipantStatus[] = [
 ];
 
 export const COHORT_PILL: Record<string, string> = {
-  internal: "bg-emerald-100 text-emerald-700",
-  customer: "bg-brand-soft text-primary",
-  noncustomer: "bg-amber-100 text-amber-800",
+  internal: "bg-muted text-foreground",
+  customer: "bg-muted text-foreground",
+  noncustomer: "bg-foreground text-background",
 };
 
 export const COHORT_LABEL_SHORT: Record<string, string> = {

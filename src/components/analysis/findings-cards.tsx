@@ -10,9 +10,9 @@ import type {
 } from "@/lib/types";
 
 const CONFIDENCE_TONE: Record<FindingConfidence, string> = {
-  high: "bg-emerald-100 text-emerald-700",
-  medium: "bg-amber-100 text-amber-800",
-  low: "bg-border-soft text-text-3",
+  high: "bg-foreground text-background",
+  medium: "bg-muted text-foreground",
+  low: "bg-muted text-muted-foreground",
 };
 
 export function FindingsCards({
@@ -73,7 +73,7 @@ export function FindingsCards({
                     {(f.quotes ?? []).map((q, qi) => (
                       <blockquote
                         key={qi}
-                        className="border-l-2 border-primary/40 bg-brand-soft/50 px-2.5 py-1.5 text-[12px] italic text-text-2"
+                        className="border-l-2 border-border bg-muted/50 px-2.5 py-1.5 text-[12px] italic text-muted-foreground"
                       >
                         “{q}”
                       </blockquote>
@@ -91,7 +91,7 @@ export function FindingsCards({
 
 function SynthesisCard({ synthesis }: { synthesis: Synthesis }) {
   return (
-    <Card className="border-primary/40 bg-brand-soft/30">
+    <Card className="bg-muted/40">
       <CardHeader>
         <CardTitle>Synthesis</CardTitle>
       </CardHeader>

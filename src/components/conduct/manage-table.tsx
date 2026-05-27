@@ -208,11 +208,9 @@ function Metric({
   tone?: "success" | "warning";
 }) {
   const cls =
-    tone === "success"
-      ? "text-success"
-      : tone === "warning"
-        ? "text-amber-700"
-        : "text-foreground";
+    tone === "success" || tone === "warning"
+      ? "text-foreground"
+      : "text-foreground";
   return (
     <div className="rounded-md border border-border bg-card px-3 py-2.5">
       <div className="text-[10.5px] font-medium uppercase tracking-[0.06em] text-text-3">

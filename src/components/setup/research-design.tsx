@@ -122,7 +122,7 @@ function MethodOption({
     <ToggleGroupItem
       value={value}
       variant="outline"
-      className="flex h-auto flex-col items-start gap-1 rounded-md border bg-card px-3 py-2.5 text-left whitespace-normal hover:border-text-4 hover:bg-card aria-pressed:border-primary aria-pressed:bg-brand-soft"
+      className="flex h-auto flex-col items-start gap-1 rounded-md border bg-card px-3 py-2.5 text-left whitespace-normal hover:bg-accent aria-pressed:border-foreground aria-pressed:bg-accent"
     >
       <div className="text-[13px] font-medium">{title}</div>
       <div className="text-[11px] text-text-3">{subtitle}</div>
@@ -147,15 +147,15 @@ function CohortSelector({
       className={cn(
         "flex items-start gap-2 rounded-md border bg-card px-3 py-2.5 text-left transition-colors",
         selected
-          ? "border-primary bg-brand-soft"
-          : "border-border hover:border-text-4",
+          ? "border-foreground bg-accent"
+          : "border-border hover:bg-accent",
         isPaid && !selected && "border-dashed",
       )}
     >
       <span
         className={cn(
           "mt-0.5 flex size-4 flex-shrink-0 items-center justify-center rounded-[3px] border-2",
-          selected ? "border-primary bg-primary text-white" : "border-text-4",
+          selected ? "border-foreground bg-foreground text-background" : "border-muted-foreground",
         )}
       >
         {selected ? <Check className="size-2.5" strokeWidth={3} /> : null}
@@ -250,13 +250,13 @@ function CohortDetail({
     <div
       className={cn(
         "rounded-md border bg-background p-4",
-        isPaid ? "border-amber-300 bg-amber-50/40" : "border-border",
+        isPaid ? "border-foreground/30 bg-muted/40" : "border-border",
       )}
     >
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <span className="text-[13px] font-semibold">{COHORT_LABEL[cohort]}</span>
         {isPaid ? (
-          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+          <span className="rounded bg-foreground px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-background">
             Paid via Respondent
           </span>
         ) : null}
@@ -295,7 +295,7 @@ function CohortDetail({
               value={chip.value}
               variant="outline"
               size="sm"
-              className="rounded-full border bg-card px-2.5 py-1 text-[11.5px] text-text-2 hover:border-text-4 hover:bg-card aria-pressed:border-primary aria-pressed:bg-brand-soft aria-pressed:text-primary"
+              className="rounded-full border bg-card px-2.5 py-1 text-[11.5px] text-muted-foreground hover:bg-accent aria-pressed:border-foreground aria-pressed:bg-foreground aria-pressed:text-background"
             >
               {chip.label}
             </ToggleGroupItem>
@@ -333,14 +333,14 @@ function CohortDetail({
                 <ToggleGroupItem
                   value="yes"
                   variant="outline"
-                  className="h-auto rounded border bg-card px-3 py-1.5 text-[12px] text-text-2 hover:border-text-4 hover:bg-card aria-pressed:border-primary aria-pressed:bg-brand-soft aria-pressed:text-primary"
+                  className="h-auto rounded-md border bg-card px-3 py-1.5 text-[12px] text-muted-foreground hover:bg-accent aria-pressed:border-foreground aria-pressed:bg-accent aria-pressed:text-foreground"
                 >
                   Yes, I need a screener
                 </ToggleGroupItem>
                 <ToggleGroupItem
                   value="no"
                   variant="outline"
-                  className="h-auto rounded border bg-card px-3 py-1.5 text-[12px] text-text-2 hover:border-text-4 hover:bg-card aria-pressed:border-primary aria-pressed:bg-brand-soft aria-pressed:text-primary"
+                  className="h-auto rounded-md border bg-card px-3 py-1.5 text-[12px] text-muted-foreground hover:bg-accent aria-pressed:border-foreground aria-pressed:bg-accent aria-pressed:text-foreground"
                 >
                   No, job title is enough
                 </ToggleGroupItem>

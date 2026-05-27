@@ -85,7 +85,6 @@ export function ProjectDetails({ state, update }: Props) {
             selected={designers}
             onAdd={(n) => addPerson("designer", n)}
             onRemove={(n) => removePerson("designer", n)}
-            tone="brand"
           />
           <PersonField
             label="Researcher"
@@ -93,7 +92,6 @@ export function ProjectDetails({ state, update }: Props) {
             selected={researchers}
             onAdd={(n) => addPerson("researcher", n)}
             onRemove={(n) => removePerson("researcher", n)}
-            tone="violet"
           />
         </div>
 
@@ -128,19 +126,14 @@ function PersonField({
   selected,
   onAdd,
   onRemove,
-  tone,
 }: {
   label: string;
   options: string[];
   selected: string[];
   onAdd: (name: string) => void;
   onRemove: (name: string) => void;
-  tone: "brand" | "violet";
 }) {
-  const pillCls =
-    tone === "brand"
-      ? "bg-brand-soft text-primary"
-      : "bg-violet-100 text-violet-700";
+  const pillCls = "bg-muted text-foreground";
   const available = options.filter((n) => !selected.includes(n));
   return (
     <div className="flex flex-col gap-1.5">

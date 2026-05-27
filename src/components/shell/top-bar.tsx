@@ -46,12 +46,12 @@ export function TopBar({
           href="https://calendar.google.com/calendar/u/0/r"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex size-[30px] items-center justify-center rounded-[4px] border border-border text-text-2 transition-colors hover:bg-background"
+          className="flex size-[30px] items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           aria-label="Open Google Calendar"
         >
           <Calendar className="size-3.5" />
         </a>
-        <div className="flex size-7 items-center justify-center rounded-full bg-brand-soft text-[11px] font-semibold text-primary">
+        <div className="flex size-7 items-center justify-center rounded-full bg-muted text-[11px] font-semibold text-foreground">
           {userInitials}
         </div>
       </div>

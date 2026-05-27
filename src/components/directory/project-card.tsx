@@ -26,11 +26,11 @@ import { deriveStatus, methodologyLabel } from "@/lib/project-status";
 import type { Project } from "@/lib/types";
 
 const STATUS_CLS: Record<string, string> = {
-  draft: "bg-border-soft text-text-3",
-  planning: "bg-brand-soft text-primary",
-  progress: "bg-amber-100 text-amber-800",
-  done: "bg-emerald-100 text-emerald-700",
-  analysis: "bg-violet-100 text-violet-700",
+  draft: "bg-muted text-muted-foreground",
+  planning: "bg-muted text-foreground",
+  progress: "bg-muted text-foreground",
+  done: "bg-muted text-foreground",
+  analysis: "bg-muted text-foreground",
 };
 
 export function ProjectCard({ project }: { project: Project }) {
@@ -71,15 +71,15 @@ export function ProjectCard({ project }: { project: Project }) {
       <button
         type="button"
         onClick={open}
-        className="group flex w-full flex-col gap-2 rounded-md border border-border bg-card p-4 text-left transition-colors hover:border-text-4"
+        className="group flex w-full flex-col gap-3 rounded-lg border border-border bg-card p-5 text-left transition-colors hover:border-foreground/30"
       >
         <div className="flex items-start justify-between gap-2">
-          <div className="truncate text-[14px] font-medium tracking-tight">{name}</div>
+          <div className="truncate text-[15px] font-semibold tracking-tight">{name}</div>
           <DropdownMenu>
             <DropdownMenuTrigger
               onClick={(e) => e.stopPropagation()}
               aria-label="Project options"
-              className="inline-flex size-6 items-center justify-center rounded text-text-3 hover:bg-accent hover:text-foreground"
+              className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground"
             >
               <MoreVertical className="size-3.5" />
             </DropdownMenuTrigger>
@@ -97,36 +97,17 @@ export function ProjectCard({ project }: { project: Project }) {
           </DropdownMenu>
         </div>
         {purpose ? (
-          <div className="line-clamp-2 text-[12.5px] text-text-2">{purpose}</div>
+          <div className="line-clamp-2 text-[13px] text-muted-foreground">{purpose}</div>
         ) : null}
-        {method ? (
-          <div>
-            <span className="rounded-[3px] border border-border-soft bg-background px-1.5 py-0.5 text-[10.5px] font-medium uppercase tracking-wide text-text-2">
-              {method}
+        <div className="flex flex-col gap-1 text-[12.5px] text-muted-foreground">
+          {method ? <span>{method}</span> : null}
+          {designers.length + researchers.length > 0 ? (
+            <span className="truncate">
+              {[...designers, ...researchers].join(", ")}
             </span>
-          </div>
-        ) : null}
-        {designers.length + researchers.length > 0 ? (
-          <div className="flex flex-wrap gap-1">
-            {designers.map((n) => (
-              <span
-                key={`d-${n}`}
-                className="rounded-full bg-brand-soft px-2 py-0.5 text-[10.5px] font-medium text-primary"
-              >
-                {n}
-              </span>
-            ))}
-            {researchers.map((n) => (
-              <span
-                key={`r-${n}`}
-                className="rounded-full bg-violet-100 px-2 py-0.5 text-[10.5px] font-medium text-violet-700"
-              >
-                {n}
-              </span>
-            ))}
-          </div>
-        ) : null}
-        <div className="mt-1 flex items-center justify-between border-t border-border-soft pt-2 text-[11px] text-text-3">
+          ) : null}
+        </div>
+        <div className="mt-auto flex items-center justify-between pt-3 text-[12px] text-muted-foreground">
           <span
             className={cn(
               "rounded-full px-2 py-0.5 text-[10.5px] font-medium",
