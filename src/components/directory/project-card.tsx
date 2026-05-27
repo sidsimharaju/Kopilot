@@ -99,12 +99,23 @@ export function ProjectCard({ project }: { project: Project }) {
         {purpose ? (
           <div className="line-clamp-2 text-[13px] text-muted-foreground">{purpose}</div>
         ) : null}
-        <div className="flex flex-col gap-1 text-[12.5px] text-muted-foreground">
-          {method ? <span>{method}</span> : null}
-          {designers.length + researchers.length > 0 ? (
-            <span className="truncate">
-              {[...designers, ...researchers].join(", ")}
+        <div className="flex flex-col gap-2">
+          {method ? (
+            <span className="w-fit rounded-full bg-chart-3/15 px-2 py-0.5 text-[11px] font-medium text-chart-3">
+              {method}
             </span>
+          ) : null}
+          {designers.length + researchers.length > 0 ? (
+            <div className="flex flex-wrap gap-1">
+              {[...designers, ...researchers].map((n) => (
+                <span
+                  key={n}
+                  className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground"
+                >
+                  {n}
+                </span>
+              ))}
+            </div>
           ) : null}
         </div>
         <div className="mt-auto flex items-center justify-between pt-3 text-[12px] text-muted-foreground">
