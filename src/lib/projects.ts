@@ -84,19 +84,25 @@ export async function saveProject(
     data.shareToken = existing?.shareToken ?? newShareToken();
   }
   const base = slugify(data.S?.projectName ?? existing?.S?.projectName);
+  let nextSlug: string | undefined;
   if (base) {
     if (!existing?.slug || existing.slug !== base) {
       const fresh = await findUniqueSlug(base, id);
-      if (fresh) data.slug = fresh;
+      if (fresh) nextSlug = fresh;
     } else {
-      data.slug = existing.slug;
+      nextSlug = existing.slug;
     }
+  } else if (existing?.slug) {
+    nextSlug = existing.slug;
+  }
+  if (nextSlug) {
+    data.slug = nextSlug;
   } else {
-    data.slug = existing?.slug;
+    delete data.slug;
   }
   data.S = capTranscripts(data.S);
   await projects().doc(id).set(data, { merge: false });
-  return { shareToken: data.shareToken!, slug: data.slug ?? null };
+  return { shareToken: data.shareToken!, slug: nextSlug ?? null };
 }
 
 export async function saveProjectByShareToken(

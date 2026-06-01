@@ -10,6 +10,7 @@ export const db: Firestore =
   globalThis.__firestore ??
   new Firestore({
     projectId: process.env.GOOGLE_CLOUD_PROJECT || "gcp-product-dev",
+    ignoreUndefinedProperties: true,
   });
 
 if (process.env.NODE_ENV !== "production") {

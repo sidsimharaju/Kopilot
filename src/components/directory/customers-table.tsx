@@ -1,7 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -51,6 +61,8 @@ function dedupeKey(name: string, email: string): string {
 export function CustomersTable({ projects }: { projects: Project[] }) {
   const [query, setQuery] = useState("");
   const [cohort, setCohort] = useState<string>("all");
+  const [pending, setPending] = useState<CustomerRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const rows: CustomerRow[] = useMemo(() => {
     const map = new Map<string, CustomerRow>();
@@ -92,6 +104,34 @@ export function CustomersTable({ projects }: { projects: Project[] }) {
       return hay.includes(q);
     });
   }, [rows, query, cohort]);
+
+  async function confirmDelete() {
+    if (!pending || deleting) return;
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/customers", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({
+          name: pending.name,
+          email: pending.email === "—" ? "" : pending.email,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`HTTP ${res.status}${body ? ` — ${body}` : ""}`);
+      }
+      const data = (await res.json()) as { removed?: number };
+      toast.success(`Removed ${pending.name} (${data.removed ?? 0} entries)`);
+      setPending(null);
+      window.location.assign("/");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      toast.error(`Delete failed: ${msg}`);
+      setDeleting(false);
+    }
+  }
 
   if (rows.length === 0) {
     return (
@@ -141,6 +181,7 @@ export function CustomersTable({ projects }: { projects: Project[] }) {
               <TableHead>Cohort</TableHead>
               <TableHead>Projects</TableHead>
               <TableHead className="text-right">#</TableHead>
+              <TableHead className="w-[44px]" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -175,11 +216,64 @@ export function CustomersTable({ projects }: { projects: Project[] }) {
                 <TableCell className="text-right font-medium tabular-nums">
                   {r.projects.length}
                 </TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => setPending(r)}
+                    aria-label={`Remove ${r.name}`}
+                    className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
+
+      <Dialog
+        open={pending !== null}
+        onOpenChange={(open) => {
+          if (!deleting && !open) setPending(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-[460px]">
+          <DialogHeader>
+            <DialogTitle>Remove {pending?.name}?</DialogTitle>
+            <DialogDescription>
+              This removes the participant from every project they&apos;re in
+              {pending && pending.projects.length > 0 ? (
+                <>
+                  {" "}({pending.projects.length}{" "}
+                  {pending.projects.length === 1 ? "project" : "projects"})
+                </>
+              ) : null}
+              . The projects themselves stay intact. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-row justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPending(null)}
+              disabled={deleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={confirmDelete}
+              disabled={deleting}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              {deleting ? "Removing…" : "Remove customer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
