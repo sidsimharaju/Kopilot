@@ -53,12 +53,16 @@ export async function listProjects(): Promise<Project[]> {
 export async function getProject(idOrSlug: string): Promise<Project | null> {
   const direct = await projects().doc(idOrSlug).get();
   if (direct.exists) {
-    return { id: direct.id, ...(direct.data() as Omit<Project, "id">) };
+    const data = direct.data() as Omit<Project, "id">;
+    if (data?.deletedAt) return null;
+    return { id: direct.id, ...data };
   }
   const snap = await projects().where("slug", "==", idOrSlug).limit(1).get();
   if (snap.empty) return null;
   const doc = snap.docs[0];
-  return { id: doc.id, ...(doc.data() as Omit<Project, "id">) };
+  const data = doc.data() as Omit<Project, "id">;
+  if (data?.deletedAt) return null;
+  return { id: doc.id, ...data };
 }
 
 export async function getProjectByShareToken(token: string): Promise<Project | null> {
@@ -112,5 +116,5 @@ export async function saveProjectByShareToken(
 }
 
 export async function deleteProject(id: string): Promise<void> {
-  await projects().doc(id).delete();
+  await projects().doc(id).update({ deletedAt: new Date().toISOString() });
 }

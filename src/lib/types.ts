@@ -132,6 +132,7 @@ export type Project = {
   slug?: string;
   createdAt?: string;
   updatedAt?: string;
+  deletedAt?: string | null;
   shareToken?: string;
   S: ProjectState;
   pid?: number;

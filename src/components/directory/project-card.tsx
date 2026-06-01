@@ -4,16 +4,15 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { MoreVertical } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,12 +52,15 @@ export function ProjectCard({ project }: { project: Project }) {
   }
 
   async function handleDelete() {
+    if (deleting) return;
     setDeleting(true);
     try {
+      console.log("[delete] sending DELETE for project", project.id);
       const res = await fetch(`/api/projects/${project.id}`, {
         method: "DELETE",
         cache: "no-store",
       });
+      console.log("[delete] response", res.status);
       if (!res.ok) {
         const body = await res.text().catch(() => "");
         throw new Error(`HTTP ${res.status}${body ? ` — ${body}` : ""}`);
@@ -145,27 +147,40 @@ export function ProjectCard({ project }: { project: Project }) {
         </div>
       </div>
 
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this project?</AlertDialogTitle>
-            <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault();
-                handleDelete();
-              }}
+      <Dialog
+        open={confirmOpen}
+        onOpenChange={(open) => {
+          if (!deleting) setConfirmOpen(open);
+        }}
+      >
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>Delete &ldquo;{name}&rdquo;?</DialogTitle>
+            <DialogDescription>
+              The project will be removed from the directory. Participants you added
+              will remain visible on the Customers tab.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-row justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setConfirmOpen(false)}
+              disabled={deleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleDelete}
               disabled={deleting}
               className="bg-destructive text-white hover:bg-destructive/90"
             >
-              {deleting ? "Deleting…" : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              {deleting ? "Deleting…" : "Delete project"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

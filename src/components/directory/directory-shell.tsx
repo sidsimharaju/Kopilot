@@ -45,9 +45,14 @@ export function DirectoryShell({ projects, user }: Props) {
   const [status, setStatus] = useState("all");
   const [method, setMethod] = useState("all");
 
+  const activeProjects = useMemo(
+    () => projects.filter((p) => !p.deletedAt),
+    [projects],
+  );
+
   const filteredProjects = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return projects.filter((p) => {
+    return activeProjects.filter((p) => {
       const s = p.S ?? {};
       if (status !== "all" && deriveStatus(s).cls !== status) return false;
       if (method !== "all" && s.methodology !== method) return false;
@@ -64,7 +69,7 @@ export function DirectoryShell({ projects, user }: Props) {
         .toLowerCase();
       return hay.includes(q);
     });
-  }, [projects, query, status, method]);
+  }, [activeProjects, query, status, method]);
 
   return (
     <Tabs value={tab} onValueChange={setTab} className="flex min-h-screen flex-col">
