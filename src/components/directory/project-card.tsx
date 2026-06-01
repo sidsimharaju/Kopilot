@@ -55,16 +55,21 @@ export function ProjectCard({ project }: { project: Project }) {
   async function handleDelete() {
     setDeleting(true);
     try {
-      const res = await fetch(`/api/projects/${project.id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const res = await fetch(`/api/projects/${project.id}`, {
+        method: "DELETE",
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`HTTP ${res.status}${body ? ` — ${body}` : ""}`);
+      }
       toast.success("Project deleted");
-      router.refresh();
+      setConfirmOpen(false);
+      window.location.assign("/");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
       toast.error(`Delete failed: ${message}`);
-    } finally {
       setDeleting(false);
-      setConfirmOpen(false);
     }
   }
 

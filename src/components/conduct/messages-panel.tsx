@@ -159,7 +159,7 @@ export function MessagesPanel({ state, update }: Props) {
           </Button>
         }
       />
-      <SheetContent className="flex w-full flex-col gap-4 sm:max-w-[960px] lg:max-w-[1080px]">
+      <SheetContent className="flex w-full flex-col gap-4 sm:max-w-[640px]">
         <SheetHeader>
           <SheetTitle>Outreach templates</SheetTitle>
           <SheetDescription>
