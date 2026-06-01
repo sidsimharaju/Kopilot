@@ -15,7 +15,6 @@ import type { Participant, ParticipantCohort } from "@/lib/types";
 
 type Props = {
   cohort: ParticipantCohort;
-  withCSM?: boolean;
   initial?: Participant;
   submitLabel?: string;
   onAdd: (p: Omit<Participant, "id">) => void;
@@ -39,7 +38,6 @@ const AUDIENCE_OPTIONS: Record<ParticipantCohort, Array<{ value: string; label: 
 
 export function AddParticipantForm({
   cohort,
-  withCSM,
   initial,
   submitLabel,
   onAdd,
@@ -54,6 +52,7 @@ export function AddParticipantForm({
   );
   const [csmName, setCsmName] = useState(initial?.csmName ?? "");
   const [csmContact, setCsmContact] = useState(initial?.csmContact ?? "");
+  const viaCSM = cohort === "customer" && audience === "csm";
 
   function submit() {
     if (!name.trim()) return;
@@ -69,10 +68,13 @@ export function AddParticipantForm({
       status: initial?.status ?? "identified",
     };
     if (cohort === "customer") {
-      base.hasCSM = Boolean(withCSM);
-      if (withCSM) {
+      base.hasCSM = viaCSM;
+      if (viaCSM) {
         base.csmName = csmName.trim();
         base.csmContact = csmContact.trim();
+      } else {
+        base.csmName = "";
+        base.csmContact = "";
       }
     }
     onAdd(base);
@@ -111,12 +113,12 @@ export function AddParticipantForm({
         <div className="flex flex-col gap-1">
           <Label>Audience type</Label>
           <Select value={audience} onValueChange={(v) => v && setAudience(v)}>
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="min-w-[420px] max-w-[min(560px,calc(100vw-2rem))]">
               {AUDIENCE_OPTIONS[cohort].map((o) => (
-                <SelectItem key={o.value} value={o.value}>
+                <SelectItem key={o.value} value={o.value} className="whitespace-normal">
                   {o.label}
                 </SelectItem>
               ))}
@@ -125,7 +127,7 @@ export function AddParticipantForm({
         </div>
       ) : null}
 
-      {cohort === "customer" && withCSM ? (
+      {viaCSM ? (
         <div className="grid grid-cols-1 gap-2 border-t border-border pt-2 md:grid-cols-2">
           <div className="flex flex-col gap-1">
             <Label>CSM name</Label>

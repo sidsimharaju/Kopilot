@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CustomersTable } from "@/components/directory/customers-table";
 import { NewProjectButton } from "@/components/directory/new-project-button";
 import { ProjectCard } from "@/components/directory/project-card";
+import { UserMenu } from "@/components/shell/user-menu";
 import { deriveStatus } from "@/lib/project-status";
 import type { Project, SessionUser } from "@/lib/types";
 
@@ -32,17 +33,6 @@ const METHOD_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "usability", label: "Usability test" },
   { value: "discovery", label: "Discovery interview" },
 ];
-
-function initials(value: string | undefined): string {
-  if (!value) return "?";
-  return value
-    .split(/\s+/)
-    .map((w) => w[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
 
 type Props = {
   projects: Project[];
@@ -90,12 +80,7 @@ export function DirectoryShell({ projects, user }: Props) {
           <TabsTrigger value="customers">Customers</TabsTrigger>
         </TabsList>
         <div className="ml-auto flex items-center gap-2">
-          <div
-            className="flex size-8 items-center justify-center rounded-full bg-muted text-[12px] font-semibold text-foreground"
-            title={user.email}
-          >
-            {initials(user.name || user.email)}
-          </div>
+          <UserMenu user={user} />
         </div>
       </header>
 

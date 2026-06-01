@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import type { NextRequest } from "next/server";
 import { deleteProject, getProject, saveProject } from "@/lib/projects";
 import type { Project } from "@/lib/types";
@@ -23,7 +24,11 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
   try {
     const body = (await req.json()) as Partial<Project>;
     const result = await saveProject(id, body);
-    return NextResponse.json({ ok: true, shareToken: result.shareToken });
+    return NextResponse.json({
+      ok: true,
+      shareToken: result.shareToken,
+      slug: result.slug,
+    });
   } catch (err) {
     console.error("Save project error:", err);
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -35,6 +40,7 @@ export async function DELETE(_req: NextRequest, { params }: Ctx) {
   const { id } = await params;
   try {
     await deleteProject(id);
+    revalidatePath("/");
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("Delete project error:", err);

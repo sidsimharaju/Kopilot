@@ -99,7 +99,6 @@ export function CohortRecruitCard({ cohort, state, pid, update, updateProject }:
         {showAdd ? (
           <AddParticipantForm
             cohort={cohort}
-            withCSM={cohort === "customer"}
             onAdd={addParticipant}
             onCancel={() => setShowAdd(false)}
           />
@@ -166,7 +165,6 @@ export function CohortRecruitCard({ cohort, state, pid, update, updateProject }:
         <EditParticipantSheet
           participant={editing}
           cohort={cohort}
-          withCSM={cohort === "customer" && Boolean(editing.hasCSM)}
           open={editingId !== null}
           onOpenChange={(open) => {
             if (!open) setEditingId(null);

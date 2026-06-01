@@ -129,6 +129,7 @@ export type Synthesis = {
 
 export type Project = {
   id: string;
+  slug?: string;
   createdAt?: string;
   updatedAt?: string;
   shareToken?: string;

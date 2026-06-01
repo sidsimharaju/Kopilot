@@ -1,22 +1,22 @@
 import Link from "next/link";
-import { Calendar, Share2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Calendar } from "lucide-react";
 import { PreviewSheet } from "./preview-sheet";
-import type { Project } from "@/lib/types";
+import { ShareButton } from "./share-button";
+import { UserMenu } from "./user-menu";
+import type { Project, SessionUser } from "@/lib/types";
 
 type TopBarProps = {
   title?: string;
   project?: Project;
-  shareToken?: string | null;
-  userInitials?: string;
+  user?: SessionUser;
 };
 
 export function TopBar({
   title = "Untitled research",
   project,
-  shareToken,
-  userInitials = "SL",
+  user,
 }: TopBarProps) {
+  const handle = project?.slug || project?.id;
   return (
     <header className="row-start-1 col-span-2 flex h-[50px] items-center border-b border-border bg-card">
       <Link
@@ -33,11 +33,8 @@ export function TopBar({
       </h1>
       <div className="flex items-center gap-2 pr-4">
         {project ? <PreviewSheet project={project} /> : null}
-        {shareToken ? (
-          <Button variant="outline" size="sm" className="h-[30px] gap-1.5">
-            <Share2 className="size-3.5" />
-            Share
-          </Button>
+        {handle ? (
+          <ShareButton projectHandle={handle} projectName={project?.S?.projectName} />
         ) : null}
         <a
           href="https://calendar.google.com/calendar/u/0/r"
@@ -48,9 +45,7 @@ export function TopBar({
         >
           <Calendar className="size-3.5" />
         </a>
-        <div className="flex size-7 items-center justify-center rounded-full bg-muted text-[11px] font-semibold text-foreground">
-          {userInitials}
-        </div>
+        {user ? <UserMenu user={user} /> : null}
       </div>
     </header>
   );

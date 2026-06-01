@@ -149,6 +149,11 @@ export function ManageTable({ state, update }: Props) {
                         >
                           {COHORT_LABEL_SHORT[p.cohort ?? "internal"]}
                         </span>
+                        {p.cohort === "customer" && p.hasCSM && p.csmName ? (
+                          <span className="w-fit rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                            via CSM {p.csmName}
+                          </span>
+                        ) : null}
                       </button>
                     </td>
                     <td className="p-2">
@@ -236,7 +241,6 @@ export function ManageTable({ state, update }: Props) {
         <EditParticipantSheet
           participant={editing}
           cohort={(editing.cohort ?? "internal") as ParticipantCohort}
-          withCSM={editing.cohort === "customer" && Boolean(editing.hasCSM)}
           open={editingId !== null}
           onOpenChange={(open) => {
             if (!open) setEditingId(null);

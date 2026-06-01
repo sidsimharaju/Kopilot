@@ -29,25 +29,25 @@ const TEMPLATES: Array<{
 }> = [
   {
     key: "slackInternal",
-    label: "Slack — Internal",
+    label: "Slack (Internal Kongers)",
     description: "Reusable Slack message for any internal Konger.",
     channel: "slack",
   },
   {
     key: "slackCsm",
-    label: "Slack — CSM",
+    label: "Slack (CSMs)",
     description: "Reusable Slack message to a CSM about reaching their customer.",
     channel: "slack",
   },
   {
     key: "emailCustomer",
-    label: "Email — Customer (direct)",
+    label: "Email (Kong Customers)",
     description: "Reusable email for Kong customers without a CSM in the loop.",
     channel: "email",
   },
   {
     key: "emailNoncustomer",
-    label: "Email — Non-Kong",
+    label: "Email (Non-Kong users)",
     description: "Reusable email for non-Kong participants sourced via Respondent.",
     channel: "email",
   },
@@ -159,7 +159,7 @@ export function MessagesPanel({ state, update }: Props) {
           </Button>
         }
       />
-      <SheetContent className="flex w-full flex-col gap-4 sm:max-w-[640px]">
+      <SheetContent className="flex w-full flex-col gap-4 sm:max-w-[960px] lg:max-w-[1080px]">
         <SheetHeader>
           <SheetTitle>Outreach templates</SheetTitle>
           <SheetDescription>
@@ -171,9 +171,9 @@ export function MessagesPanel({ state, update }: Props) {
 
         <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-4">
           <Tabs defaultValue={TEMPLATES[0].key} className="flex flex-col gap-3">
-            <TabsList>
+            <TabsList className="flex flex-wrap gap-1">
               {TEMPLATES.map((t) => (
-                <TabsTrigger key={t.key} value={t.key}>
+                <TabsTrigger key={t.key} value={t.key} className="gap-1.5">
                   {t.channel === "email" ? (
                     <Mail className="size-3.5" />
                   ) : (

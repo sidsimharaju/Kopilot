@@ -35,10 +35,13 @@ export function useProject(initial: Project) {
         }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { shareToken?: string };
-      if (data.shareToken && !latest.current.shareToken) {
-        setProject((p) => ({ ...p, shareToken: data.shareToken }));
-      }
+      const data = (await res.json()) as { shareToken?: string; slug?: string | null };
+      setProject((p) => {
+        const next = { ...p };
+        if (data.shareToken && !p.shareToken) next.shareToken = data.shareToken;
+        if (data.slug && data.slug !== p.slug) next.slug = data.slug;
+        return next;
+      });
       setStatus("saved");
       setTimeout(() => setStatus((s) => (s === "saved" ? "idle" : s)), 1500);
     } catch (err) {

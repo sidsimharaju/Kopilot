@@ -7,6 +7,33 @@ export function newShareToken(): string {
   return crypto.randomBytes(12).toString("hex");
 }
 
+export function slugify(value: string | undefined): string {
+  return (value ?? "")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+}
+
+async function findUniqueSlug(
+  base: string,
+  ownId: string,
+): Promise<string | null> {
+  if (!base) return null;
+  let candidate = base;
+  let n = 1;
+  while (true) {
+    const snap = await projects().where("slug", "==", candidate).limit(2).get();
+    const taken = snap.docs.some((d) => d.id !== ownId);
+    if (!taken) return candidate;
+    n += 1;
+    candidate = `${base}-${n}`;
+    if (n > 50) return `${base}-${Date.now().toString(36)}`;
+  }
+}
+
 function capTranscripts(S: ProjectState | undefined): ProjectState | undefined {
   if (!S?.participants) return S;
   return {
@@ -23,9 +50,14 @@ export async function listProjects(): Promise<Project[]> {
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Project, "id">) }));
 }
 
-export async function getProject(id: string): Promise<Project | null> {
-  const doc = await projects().doc(id).get();
-  if (!doc.exists) return null;
+export async function getProject(idOrSlug: string): Promise<Project | null> {
+  const direct = await projects().doc(idOrSlug).get();
+  if (direct.exists) {
+    return { id: direct.id, ...(direct.data() as Omit<Project, "id">) };
+  }
+  const snap = await projects().where("slug", "==", idOrSlug).limit(1).get();
+  if (snap.empty) return null;
+  const doc = snap.docs[0];
   return { id: doc.id, ...(doc.data() as Omit<Project, "id">) };
 }
 
@@ -40,17 +72,27 @@ export async function getProjectByShareToken(token: string): Promise<Project | n
 export async function saveProject(
   id: string,
   body: Partial<Project>,
-): Promise<{ shareToken: string }> {
+): Promise<{ shareToken: string; slug: string | null }> {
   const data: Partial<Project> = { ...body, updatedAt: new Date().toISOString() };
+  const existingSnap = await projects().doc(id).get();
+  const existing = existingSnap.exists ? (existingSnap.data() as Project) : null;
   if (!data.shareToken) {
-    const existing = await projects().doc(id).get();
-    data.shareToken = existing.exists
-      ? (existing.data()?.shareToken ?? newShareToken())
-      : newShareToken();
+    data.shareToken = existing?.shareToken ?? newShareToken();
+  }
+  const base = slugify(data.S?.projectName ?? existing?.S?.projectName);
+  if (base) {
+    if (!existing?.slug || existing.slug !== base) {
+      const fresh = await findUniqueSlug(base, id);
+      if (fresh) data.slug = fresh;
+    } else {
+      data.slug = existing.slug;
+    }
+  } else {
+    data.slug = existing?.slug;
   }
   data.S = capTranscripts(data.S);
   await projects().doc(id).set(data, { merge: false });
-  return { shareToken: data.shareToken! };
+  return { shareToken: data.shareToken!, slug: data.slug ?? null };
 }
 
 export async function saveProjectByShareToken(

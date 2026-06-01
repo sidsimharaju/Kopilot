@@ -46,8 +46,10 @@ export function ProjectCard({ project }: { project: Project }) {
   const status = deriveStatus(state);
   const method = methodologyLabel(state.methodology);
 
+  const handle = project.slug || project.id;
+
   function open() {
-    router.push(`/projects/${project.id}/setup`);
+    router.push(`/projects/${handle}/setup`);
   }
 
   async function handleDelete() {

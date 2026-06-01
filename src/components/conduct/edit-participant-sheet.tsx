@@ -14,7 +14,6 @@ import { AddParticipantForm } from "./add-participant-form";
 type Props = {
   participant: Participant;
   cohort: ParticipantCohort;
-  withCSM?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (p: Omit<Participant, "id">) => void;
@@ -23,7 +22,6 @@ type Props = {
 export function EditParticipantSheet({
   participant,
   cohort,
-  withCSM,
   open,
   onOpenChange,
   onSave,
@@ -48,7 +46,6 @@ export function EditParticipantSheet({
         <div className="px-4">
           <AddParticipantForm
             cohort={cohort}
-            withCSM={withCSM}
             initial={draft}
             submitLabel="Save"
             onAdd={(p) => {

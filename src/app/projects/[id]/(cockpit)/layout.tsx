@@ -11,7 +11,7 @@ type Props = {
 };
 
 export default async function CockpitLayout({ children, params }: Props) {
-  await requireUser();
+  const user = await requireUser();
   const { id } = await params;
   const project = await getProject(id);
   if (!project) notFound();
@@ -24,12 +24,13 @@ export default async function CockpitLayout({ children, params }: Props) {
   const conductBadge = (state.participants ?? []).length || undefined;
   const analysisBadge =
     status.cls === "analysis" || status.cls === "done" ? "•" : undefined;
+  const handle = project.slug || project.id;
 
   return (
     <div className="grid h-screen grid-cols-[200px_1fr] grid-rows-[50px_1fr] overflow-hidden">
-      <TopBar title={title} project={project} shareToken={project.shareToken ?? null} />
+      <TopBar title={title} project={project} user={user} />
       <Sidebar
-        projectId={id}
+        projectId={handle}
         setupDone={setupDone}
         conductBadge={conductBadge}
         analysisBadge={analysisBadge}
