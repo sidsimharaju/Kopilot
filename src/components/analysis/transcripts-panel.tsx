@@ -1,12 +1,41 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { useRef, useState } from "react";
+import { ChevronRight, Upload } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { STATUS_LABEL, STATUS_TONE, initials } from "@/lib/participant";
 import type { Participant, ProjectState } from "@/lib/types";
+
+const ACCEPTED = ".txt,.docx,.vtt,.srt,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/vtt";
+
+function stripCaptionMarkup(input: string): string {
+  return input
+    .replace(/\r\n/g, "\n")
+    .replace(/^WEBVTT.*$/im, "")
+    .replace(/^\d+\s*$/gm, "")
+    .replace(/^\d{1,2}:\d{2}(?::\d{2})?(?:[.,]\d{1,3})?\s*-->\s*\d{1,2}:\d{2}(?::\d{2})?(?:[.,]\d{1,3})?.*$/gm, "")
+    .replace(/<[^>]+>/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+async function readUpload(file: File): Promise<string> {
+  const ext = file.name.toLowerCase().split(".").pop() ?? "";
+  const isDocx = ext === "docx";
+  const res = await fetch(
+    `/api/parse-doc?filename=${encodeURIComponent(file.name)}`,
+    { method: "POST", body: await file.arrayBuffer() },
+  );
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = (await res.json()) as { text?: string };
+  const raw = data.text ?? "";
+  if (isDocx) return raw.trim();
+  return stripCaptionMarkup(raw);
+}
 
 type Props = {
   state: ProjectState;
@@ -40,8 +69,9 @@ export function TranscriptsPanel({ state, update }: Props) {
       <CardHeader>
         <CardTitle>Transcripts</CardTitle>
         <p className="text-[12px] text-muted-foreground">
-          Paste a transcript for each completed session. Analysis uses everything
-          marked &ldquo;completed&rdquo; with text.
+          Paste or upload a transcript for each completed session. We accept .txt,
+          .docx, .vtt, and .srt files. Analysis uses everything marked
+          &ldquo;completed&rdquo; with text.
         </p>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
@@ -76,8 +106,39 @@ function TranscriptRow({
   onMarkCompleted: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
   const hasTranscript = Boolean((participant.transcript || "").trim());
   const status = participant.status ?? "identified";
+
+  async function handleFile(file: File | null | undefined) {
+    if (!file) return;
+    const ext = file.name.toLowerCase().split(".").pop() ?? "";
+    if (!["txt", "docx", "vtt", "srt"].includes(ext)) {
+      toast.error("Unsupported file type. Use .txt, .docx, .vtt, or .srt.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const text = await readUpload(file);
+      if (!text.trim()) {
+        toast.error("File was empty after parsing.");
+        return;
+      }
+      const existing = (participant.transcript || "").trim();
+      const next = existing
+        ? `${existing}\n\n${text}`.trim()
+        : text;
+      onSetTranscript(next);
+      toast.success(`Loaded ${text.length.toLocaleString()} characters from ${file.name}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      toast.error(`Upload failed: ${msg}`);
+    } finally {
+      setUploading(false);
+      if (fileInput.current) fileInput.current.value = "";
+    }
+  }
 
   return (
     <div className="rounded border border-border bg-background">
@@ -114,22 +175,57 @@ function TranscriptRow({
         </span>
       </button>
       {open ? (
-        <div className="border-t border-border p-3 flex flex-col gap-2">
+        <div className="flex flex-col gap-2 border-t border-border p-3">
           <Textarea
             rows={8}
-            placeholder="Paste the transcript here. The analysis will use the first ~5,000 characters."
+            placeholder="Paste the transcript here, or upload a .txt / .docx / .vtt / .srt file. The analysis uses the first ~5,000 characters."
             value={participant.transcript ?? ""}
             onChange={(e) => onSetTranscript(e.target.value)}
           />
-          {status !== "completed" && hasTranscript ? (
-            <button
+          <input
+            ref={fileInput}
+            type="file"
+            accept={ACCEPTED}
+            className="hidden"
+            onChange={(e) => handleFile(e.target.files?.[0])}
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
               type="button"
-              className="self-start text-[11.5px] font-medium text-primary hover:underline"
-              onClick={onMarkCompleted}
+              variant="outline"
+              size="sm"
+              onClick={() => fileInput.current?.click()}
+              disabled={uploading}
+              className="gap-1.5"
             >
-              Mark as completed
-            </button>
-          ) : null}
+              <Upload className="size-3.5" />
+              {uploading ? "Uploading…" : hasTranscript ? "Append from file" : "Upload file"}
+            </Button>
+            {hasTranscript ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => onSetTranscript("")}
+                disabled={uploading}
+                className="text-muted-foreground"
+              >
+                Clear
+              </Button>
+            ) : null}
+            <span className="text-[11px] text-muted-foreground">
+              .txt · .docx · .vtt · .srt
+            </span>
+            {status !== "completed" && hasTranscript ? (
+              <button
+                type="button"
+                className="ml-auto text-[11.5px] font-medium text-primary hover:underline"
+                onClick={onMarkCompleted}
+              >
+                Mark as completed
+              </button>
+            ) : null}
+          </div>
         </div>
       ) : null}
     </div>

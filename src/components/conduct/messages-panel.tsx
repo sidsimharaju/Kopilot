@@ -159,7 +159,7 @@ export function MessagesPanel({ state, update }: Props) {
           </Button>
         }
       />
-      <SheetContent className="flex w-full flex-col gap-4 sm:max-w-[640px]">
+      <SheetContent className="flex w-full flex-col gap-4 sm:max-w-[820px]">
         <SheetHeader>
           <SheetTitle>Outreach templates</SheetTitle>
           <SheetDescription>
@@ -171,9 +171,9 @@ export function MessagesPanel({ state, update }: Props) {
 
         <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-4">
           <Tabs defaultValue={TEMPLATES[0].key} className="flex flex-col gap-3">
-            <TabsList>
+            <TabsList className="w-full justify-start">
               {TEMPLATES.map((t) => (
-                <TabsTrigger key={t.key} value={t.key} className="gap-1.5">
+                <TabsTrigger key={t.key} value={t.key} className="gap-1.5 whitespace-nowrap">
                   {t.channel === "email" ? (
                     <Mail className="size-3.5" />
                   ) : (
