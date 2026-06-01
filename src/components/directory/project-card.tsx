@@ -75,10 +75,17 @@ export function ProjectCard({ project }: { project: Project }) {
 
   return (
     <>
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={open}
-        className="group flex w-full flex-col gap-3 rounded-xl bg-card p-5 text-left shadow-sm ring-1 ring-foreground/10 transition-all hover:shadow-md hover:ring-foreground/20"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            open();
+          }
+        }}
+        className="group flex w-full cursor-pointer flex-col gap-3 rounded-xl bg-card p-5 text-left shadow-sm ring-1 ring-foreground/10 transition-all hover:shadow-md hover:ring-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <div className="flex items-start justify-between gap-2">
           <div className="truncate text-[15px] font-semibold tracking-tight">{name}</div>
@@ -136,7 +143,7 @@ export function ProjectCard({ project }: { project: Project }) {
           </span>
           <span>Updated {fmtRelative(project.updatedAt)}</span>
         </div>
-      </button>
+      </div>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>

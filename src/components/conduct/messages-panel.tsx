@@ -29,26 +29,26 @@ const TEMPLATES: Array<{
 }> = [
   {
     key: "slackInternal",
-    label: "Slack (Internal Kongers)",
-    description: "Reusable Slack message for any internal Konger.",
+    label: "Internal",
+    description: "Slack template for any internal Konger.",
     channel: "slack",
   },
   {
     key: "slackCsm",
-    label: "Slack (CSMs)",
-    description: "Reusable Slack message to a CSM about reaching their customer.",
+    label: "CSM",
+    description: "Slack template to a CSM about reaching their customer.",
     channel: "slack",
   },
   {
     key: "emailCustomer",
-    label: "Email (Kong Customers)",
-    description: "Reusable email for Kong customers without a CSM in the loop.",
+    label: "Customer",
+    description: "Email template for Kong customers without a CSM in the loop.",
     channel: "email",
   },
   {
     key: "emailNoncustomer",
-    label: "Email (Non-Kong users)",
-    description: "Reusable email for non-Kong participants sourced via Respondent.",
+    label: "Non-Kong",
+    description: "Email template for non-Kong participants sourced via Respondent.",
     channel: "email",
   },
 ];
@@ -171,7 +171,7 @@ export function MessagesPanel({ state, update }: Props) {
 
         <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-4">
           <Tabs defaultValue={TEMPLATES[0].key} className="flex flex-col gap-3">
-            <TabsList className="flex flex-wrap gap-1">
+            <TabsList>
               {TEMPLATES.map((t) => (
                 <TabsTrigger key={t.key} value={t.key} className="gap-1.5">
                   {t.channel === "email" ? (
@@ -179,7 +179,7 @@ export function MessagesPanel({ state, update }: Props) {
                   ) : (
                     <MessageSquarePlus className="size-3.5" />
                   )}
-                  {t.label}
+                  {t.channel === "email" ? "Email" : "Slack"} · {t.label}
                 </TabsTrigger>
               ))}
             </TabsList>
