@@ -48,6 +48,7 @@ export function EditParticipantSheet({
             cohort={cohort}
             initial={draft}
             submitLabel="Save"
+            allowCohortChange
             onAdd={(p) => {
               onSave(p);
               onOpenChange(false);
