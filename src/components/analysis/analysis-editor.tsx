@@ -102,7 +102,7 @@ export function AnalysisEditor({ initial }: { initial: Project }) {
         </>
       )}
 
-      {hasTranscripts ? <ReportsPanel project={project} /> : null}
+      {hasTranscripts ? <ReportsPanel project={project} update={update} /> : null}
     </div>
   );
 }

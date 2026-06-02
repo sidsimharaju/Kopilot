@@ -83,6 +83,7 @@ export type ProjectState = {
   synthesisResult?: Synthesis | null;
   synthesisRich?: string;
   messageTemplates?: MessageTemplates;
+  reports?: { summary?: string; full?: string };
   [k: string]: unknown;
 };
 
@@ -143,4 +144,26 @@ export type Project = {
 export type SessionUser = {
   email: string;
   name: string;
+};
+
+export type FeatureRequestComment = {
+  id: string;
+  authorEmail: string;
+  authorName: string;
+  body: string;
+  createdAt: string;
+};
+
+export type FeatureRequest = {
+  id: string;
+  title: string;
+  body: string;
+  status: "open" | "resolved";
+  authorEmail: string;
+  authorName: string;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt?: string | null;
+  votes?: Record<string, 1 | -1>;
+  comments?: FeatureRequestComment[];
 };

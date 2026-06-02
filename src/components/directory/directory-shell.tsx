@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Lightbulb, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -85,6 +86,17 @@ export function DirectoryShell({ projects, user }: Props) {
           <TabsTrigger value="customers">Customers</TabsTrigger>
         </TabsList>
         <div className="ml-auto flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-[30px] gap-1.5"
+            render={
+              <Link href="/requests">
+                <Lightbulb className="size-3.5" />
+                Request features
+              </Link>
+            }
+          />
           <UserMenu user={user} />
         </div>
       </header>
