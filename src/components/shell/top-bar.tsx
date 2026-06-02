@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { Calendar, Lightbulb } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Calendar } from "lucide-react";
 import { PreviewSheet } from "./preview-sheet";
 import { ShareButton } from "./share-button";
 import { UserMenu } from "./user-menu";
@@ -37,17 +36,6 @@ export function TopBar({
         {handle ? (
           <ShareButton projectHandle={handle} projectName={project?.S?.projectName} />
         ) : null}
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-[30px] gap-1.5"
-          render={
-            <Link href="/requests">
-              <Lightbulb className="size-3.5" />
-              Request features
-            </Link>
-          }
-        />
         <a
           href="https://calendar.google.com/calendar/u/0/r"
           target="_blank"
