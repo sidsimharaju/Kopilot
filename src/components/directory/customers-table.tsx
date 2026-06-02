@@ -28,8 +28,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { COHORT_PILL } from "@/lib/participant";
-import { cn } from "@/lib/utils";
 import type { ParticipantCohort, Project } from "@/lib/types";
 
 type CustomerRow = {
@@ -48,11 +46,11 @@ const COHORT_FILTERS: Array<{ value: string; label: string }> = [
   { value: "noncustomer", label: "Non-Kong customers" },
 ];
 
-const COHORT_LABEL_SHORT: Record<ParticipantCohort, string> = {
-  internal: "Internal",
-  customer: "Customer",
-  noncustomer: "Non-Kong",
-};
+const COHORT_OPTIONS: Array<{ value: ParticipantCohort; label: string }> = [
+  { value: "internal", label: "Internal Konger" },
+  { value: "customer", label: "Kong customer" },
+  { value: "noncustomer", label: "Non-Kong" },
+];
 
 function dedupeKey(name: string, email: string): string {
   return `${name.trim().toLowerCase()}|${email.trim().toLowerCase()}`;
@@ -63,6 +61,35 @@ export function CustomersTable({ projects }: { projects: Project[] }) {
   const [cohort, setCohort] = useState<string>("all");
   const [pending, setPending] = useState<CustomerRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [savingCohort, setSavingCohort] = useState<string | null>(null);
+
+  async function changeCohort(row: CustomerRow, next: ParticipantCohort) {
+    if (row.cohort === next) return;
+    const key = dedupeKey(row.name, row.email === "—" ? "" : row.email);
+    setSavingCohort(key);
+    try {
+      const res = await fetch("/api/customers", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({
+          name: row.name,
+          email: row.email === "—" ? "" : row.email,
+          cohort: next,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`HTTP ${res.status}${body ? ` — ${body}` : ""}`);
+      }
+      toast.success(`Moved ${row.name} to ${COHORT_OPTIONS.find((o) => o.value === next)?.label}`);
+      window.location.assign("/");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      toast.error(`Update failed: ${msg}`);
+      setSavingCohort(null);
+    }
+  }
 
   const rows: CustomerRow[] = useMemo(() => {
     const map = new Map<string, CustomerRow>();
@@ -192,14 +219,24 @@ export function CustomersTable({ projects }: { projects: Project[] }) {
                 <TableCell className="text-muted-foreground">{r.email}</TableCell>
                 <TableCell>{r.role}</TableCell>
                 <TableCell>
-                  <span
-                    className={cn(
-                      "inline-flex items-center rounded-full px-2 py-0.5 text-[10.5px] font-medium",
-                      COHORT_PILL[r.cohort],
-                    )}
+                  <Select
+                    value={r.cohort}
+                    onValueChange={(v) =>
+                      v && changeCohort(r, v as ParticipantCohort)
+                    }
+                    disabled={savingCohort === dedupeKey(r.name, r.email === "—" ? "" : r.email)}
                   >
-                    {COHORT_LABEL_SHORT[r.cohort]}
-                  </span>
+                    <SelectTrigger size="sm" className="w-[150px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COHORT_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>
+                          {o.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">

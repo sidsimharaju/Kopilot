@@ -18,10 +18,10 @@ export function AnalysisEditor({ initial }: { initial: Project }) {
   const [analyzing, setAnalyzing] = useState(false);
 
   const participants = project.S.participants ?? [];
-  const completedWithTranscripts = participants.filter(
-    (p) => p.status === "completed" && (p.transcript || "").trim().length > 0,
+  const participantsWithTranscripts = participants.filter(
+    (p) => (p.transcript || "").trim().length > 0,
   );
-  const hasTranscripts = completedWithTranscripts.length > 0;
+  const hasTranscripts = participantsWithTranscripts.length > 0;
   const hasAnalysis =
     (project.S.analysisResult?.participants?.length ?? 0) > 0 ||
     Boolean(project.S.synthesisResult);
@@ -75,7 +75,7 @@ export function AnalysisEditor({ initial }: { initial: Project }) {
             </Button>
             {!hasTranscripts ? (
               <div className="text-[11.5px] text-muted-foreground">
-                Add a transcript to a completed participant to enable analysis.
+                Paste or upload at least one transcript above to enable analysis.
               </div>
             ) : null}
           </CardContent>

@@ -17,7 +17,9 @@ Response schemas:
 
 export function buildAnalysisPrompt(project: Project): string {
   const S = project.S;
-  const completed = (S.participants ?? []).filter((p) => p.status === "completed");
+  const completed = (S.participants ?? []).filter(
+    (p) => (p.transcript || "").trim().length > 0,
+  );
   const participantData =
     completed.length === 0
       ? "No completed interviews. Return {\"participants\":[],\"synthesis\":null}."
@@ -126,7 +128,9 @@ export async function generateReport(
 
   const S = project.S;
   const TRANSCRIPT_LIMIT = 6000;
-  const completed = (S.participants ?? []).filter((p) => p.status === "completed");
+  const completed = (S.participants ?? []).filter(
+    (p) => (p.transcript || "").trim().length > 0,
+  );
   const participantData = completed
     .map((p) => {
       const raw = p.transcript || "";

@@ -1,6 +1,6 @@
 import "server-only";
 import crypto from "node:crypto";
-import { projects, TRANSCRIPT_CHAR_LIMIT } from "./firestore";
+import { projects } from "./firestore";
 import type { Project, ProjectState } from "./types";
 
 export function newShareToken(): string {
@@ -35,14 +35,7 @@ async function findUniqueSlug(
 }
 
 function capTranscripts(S: ProjectState | undefined): ProjectState | undefined {
-  if (!S?.participants) return S;
-  return {
-    ...S,
-    participants: S.participants.map((p) => ({
-      ...p,
-      transcript: (p.transcript || "").slice(0, TRANSCRIPT_CHAR_LIMIT),
-    })),
-  };
+  return S;
 }
 
 export async function listProjects(): Promise<Project[]> {

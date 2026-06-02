@@ -18,5 +18,3 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 export const projects = () => db.collection("projects");
-
-export const TRANSCRIPT_CHAR_LIMIT = 20000;

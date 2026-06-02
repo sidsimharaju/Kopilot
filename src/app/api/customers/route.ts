@@ -3,10 +3,28 @@ import { revalidatePath } from "next/cache";
 import type { NextRequest } from "next/server";
 import { projects } from "@/lib/firestore";
 import { requireUser } from "@/lib/auth";
-import type { Participant, Project } from "@/lib/types";
+import type { Participant, ParticipantCohort, Project } from "@/lib/types";
+
+const ALLOWED_COHORTS: ReadonlySet<ParticipantCohort> = new Set([
+  "internal",
+  "customer",
+  "noncustomer",
+]);
 
 function normalize(v: string | undefined | null): string {
   return (v ?? "").trim().toLowerCase();
+}
+
+function matchesCustomer(
+  p: Participant,
+  targetName: string,
+  targetEmail: string,
+): boolean {
+  const matchesName = !!targetName && normalize(p.name) === targetName;
+  const matchesEmail = !!targetEmail && normalize(p.contact) === targetEmail;
+  return targetName && targetEmail
+    ? matchesName && matchesEmail
+    : matchesName || matchesEmail;
 }
 
 export async function DELETE(req: NextRequest) {
@@ -37,11 +55,7 @@ export async function DELETE(req: NextRequest) {
     if (participants.length === 0) continue;
 
     const next = participants.filter((p: Participant) => {
-      const matchesName = !!targetName && normalize(p.name) === targetName;
-      const matchesEmail = !!targetEmail && normalize(p.contact) === targetEmail;
-      const isMatch = targetName && targetEmail
-        ? matchesName && matchesEmail
-        : matchesName || matchesEmail;
+      const isMatch = matchesCustomer(p, targetName, targetEmail);
       if (isMatch) removed += 1;
       return !isMatch;
     });
@@ -56,4 +70,60 @@ export async function DELETE(req: NextRequest) {
 
   revalidatePath("/");
   return NextResponse.json({ ok: true, removed, affectedProjects });
+}
+
+export async function PATCH(req: NextRequest) {
+  await requireUser();
+  let body: { name?: string; email?: string; cohort?: string };
+  try {
+    body = (await req.json()) as { name?: string; email?: string; cohort?: string };
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const targetName = normalize(body.name);
+  const targetEmail = normalize(body.email);
+  const cohort = body.cohort as ParticipantCohort | undefined;
+  if (!cohort || !ALLOWED_COHORTS.has(cohort)) {
+    return NextResponse.json(
+      { error: "cohort must be one of: internal, customer, noncustomer" },
+      { status: 400 },
+    );
+  }
+  if (!targetName && !targetEmail) {
+    return NextResponse.json(
+      { error: "Provide name or email" },
+      { status: 400 },
+    );
+  }
+
+  const snap = await projects().get();
+  let affectedProjects = 0;
+  let updated = 0;
+
+  for (const doc of snap.docs) {
+    const data = doc.data() as Project;
+    const participants = data?.S?.participants ?? [];
+    if (participants.length === 0) continue;
+
+    let changed = false;
+    const next = participants.map((p: Participant) => {
+      if (!matchesCustomer(p, targetName, targetEmail)) return p;
+      if (p.cohort === cohort) return p;
+      changed = true;
+      updated += 1;
+      const nextType = cohort === "internal" ? "internal" : "external";
+      return { ...p, cohort, type: nextType };
+    });
+
+    if (!changed) continue;
+    affectedProjects += 1;
+    await doc.ref.update({
+      "S.participants": next,
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
+  revalidatePath("/");
+  return NextResponse.json({ ok: true, updated, affectedProjects });
 }
