@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { generateReport } from "@/lib/analyze";
 import type { Project, ProjectState } from "@/lib/types";
-import { MarkdownEditor } from "./markdown-editor";
+import { RichEditor } from "./rich-editor";
 
 type Kind = "summary" | "full";
 
@@ -54,8 +54,21 @@ export function ReportsPanel({ project, update }: Props) {
 
   async function copy() {
     try {
-      await navigator.clipboard.writeText(content);
-      toast.success("Copied as markdown");
+      const text = content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      const clip = (
+        window as unknown as { ClipboardItem?: typeof ClipboardItem }
+      ).ClipboardItem;
+      if (clip && navigator.clipboard && "write" in navigator.clipboard) {
+        await navigator.clipboard.write([
+          new clip({
+            "text/html": new Blob([content], { type: "text/html" }),
+            "text/plain": new Blob([text], { type: "text/plain" }),
+          }),
+        ]);
+      } else {
+        await navigator.clipboard.writeText(text);
+      }
+      toast.success("Copied. Paste into Google Docs to keep formatting.");
     } catch {
       toast.error("Copy failed");
     }
@@ -95,7 +108,7 @@ export function ReportsPanel({ project, update }: Props) {
                 className="gap-1.5"
               >
                 <Copy className="size-3.5" />
-                Copy markdown
+                Copy
               </Button>
             </>
           ) : (
@@ -115,7 +128,7 @@ export function ReportsPanel({ project, update }: Props) {
         </div>
 
         {hasContent ? (
-          <MarkdownEditor
+          <RichEditor
             value={content}
             onChange={(v) => setReport(active, v)}
             placeholder={`Write the ${TITLE[active].toLowerCase()} here.`}

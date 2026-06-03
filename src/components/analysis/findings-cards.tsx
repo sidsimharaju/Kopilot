@@ -13,7 +13,7 @@ import type {
   ProjectState,
   Synthesis,
 } from "@/lib/types";
-import { MarkdownEditor } from "./markdown-editor";
+import { RichEditor } from "./rich-editor";
 
 const CONFIDENCE_TONE: Record<FindingConfidence, string> = {
   high: "bg-foreground text-background",
@@ -217,7 +217,7 @@ function SynthesisCard({
         <CardTitle>Synthesis</CardTitle>
       </CardHeader>
       <CardContent>
-        <MarkdownEditor
+        <RichEditor
           value={value}
           onChange={setSynthesisRich}
           placeholder="Write the cross-interview synthesis here. Use headings and bullets to structure it."

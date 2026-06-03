@@ -74,25 +74,45 @@ export async function DELETE(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   await requireUser();
-  let body: { name?: string; email?: string; cohort?: string };
+  let body: {
+    name?: string;
+    email?: string;
+    update?: {
+      name?: string;
+      email?: string;
+      role?: string;
+      company?: string;
+      cohort?: string;
+    };
+    cohort?: string;
+  };
   try {
-    body = (await req.json()) as { name?: string; email?: string; cohort?: string };
+    body = (await req.json()) as typeof body;
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
   const targetName = normalize(body.name);
   const targetEmail = normalize(body.email);
-  const cohort = body.cohort as ParticipantCohort | undefined;
-  if (!cohort || !ALLOWED_COHORTS.has(cohort)) {
-    return NextResponse.json(
-      { error: "cohort must be one of: internal, customer, noncustomer" },
-      { status: 400 },
-    );
-  }
   if (!targetName && !targetEmail) {
     return NextResponse.json(
       { error: "Provide name or email" },
+      { status: 400 },
+    );
+  }
+
+  const legacyCohort = body.cohort as ParticipantCohort | undefined;
+  const update = body.update ?? (legacyCohort ? { cohort: legacyCohort } : null);
+  if (!update) {
+    return NextResponse.json(
+      { error: "Provide update fields" },
+      { status: 400 },
+    );
+  }
+
+  if (update.cohort && !ALLOWED_COHORTS.has(update.cohort as ParticipantCohort)) {
+    return NextResponse.json(
+      { error: "cohort must be one of: internal, customer, noncustomer" },
       { status: 400 },
     );
   }
@@ -109,11 +129,37 @@ export async function PATCH(req: NextRequest) {
     let changed = false;
     const next = participants.map((p: Participant) => {
       if (!matchesCustomer(p, targetName, targetEmail)) return p;
-      if (p.cohort === cohort) return p;
-      changed = true;
-      updated += 1;
-      const nextType = cohort === "internal" ? "internal" : "external";
-      return { ...p, cohort, type: nextType };
+      const merged: Participant = { ...p };
+      let touched = false;
+      if (update.name !== undefined && update.name !== p.name) {
+        merged.name = update.name;
+        touched = true;
+      }
+      if (update.email !== undefined && update.email !== p.contact) {
+        merged.contact = update.email;
+        touched = true;
+      }
+      if (update.role !== undefined && update.role !== p.role) {
+        merged.role = update.role;
+        touched = true;
+      }
+      if (update.company !== undefined && update.company !== p.company) {
+        merged.company = update.company;
+        touched = true;
+      }
+      if (update.cohort) {
+        const newCohort = update.cohort as ParticipantCohort;
+        if (newCohort !== p.cohort) {
+          merged.cohort = newCohort;
+          merged.type = newCohort === "internal" ? "internal" : "external";
+          touched = true;
+        }
+      }
+      if (touched) {
+        changed = true;
+        updated += 1;
+      }
+      return touched ? merged : p;
     });
 
     if (!changed) continue;

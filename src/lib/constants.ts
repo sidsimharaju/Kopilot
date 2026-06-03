@@ -4,8 +4,6 @@ export const DESIGNERS = [
   "Shikha", "Sid", "Travis",
 ];
 
-export const RESEARCHERS = ["Shikha"];
-
 export const COHORTS = ["internal", "customers", "noncustomers"] as const;
 
 export const COHORT_LABEL: Record<string, string> = {

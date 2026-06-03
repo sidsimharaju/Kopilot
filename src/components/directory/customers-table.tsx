@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Search, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { Pencil, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -21,6 +23,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
   Table,
   TableBody,
   TableCell,
@@ -28,6 +38,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 import type { ParticipantCohort, Project } from "@/lib/types";
 
 type CustomerRow = {
@@ -52,44 +63,30 @@ const COHORT_OPTIONS: Array<{ value: ParticipantCohort; label: string }> = [
   { value: "noncustomer", label: "Non-Kong" },
 ];
 
+const COHORT_PILL: Record<ParticipantCohort, string> = {
+  internal: "bg-chart-2/15 text-chart-2 ring-chart-2/30",
+  customer: "bg-chart-3/15 text-chart-3 ring-chart-3/30",
+  noncustomer: "bg-chart-5/20 text-chart-5 ring-chart-5/30",
+};
+
+const COHORT_LABEL_SHORT: Record<ParticipantCohort, string> = {
+  internal: "Internal",
+  customer: "Customer",
+  noncustomer: "Non-Kong",
+};
+
 function dedupeKey(name: string, email: string): string {
   return `${name.trim().toLowerCase()}|${email.trim().toLowerCase()}`;
 }
 
 export function CustomersTable({ projects }: { projects: Project[] }) {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [cohort, setCohort] = useState<string>("all");
   const [pending, setPending] = useState<CustomerRow | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [savingCohort, setSavingCohort] = useState<string | null>(null);
-
-  async function changeCohort(row: CustomerRow, next: ParticipantCohort) {
-    if (row.cohort === next) return;
-    const key = dedupeKey(row.name, row.email === "—" ? "" : row.email);
-    setSavingCohort(key);
-    try {
-      const res = await fetch("/api/customers", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        cache: "no-store",
-        body: JSON.stringify({
-          name: row.name,
-          email: row.email === "—" ? "" : row.email,
-          cohort: next,
-        }),
-      });
-      if (!res.ok) {
-        const body = await res.text().catch(() => "");
-        throw new Error(`HTTP ${res.status}${body ? ` — ${body}` : ""}`);
-      }
-      toast.success(`Moved ${row.name} to ${COHORT_OPTIONS.find((o) => o.value === next)?.label}`);
-      window.location.assign("/");
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Unknown error";
-      toast.error(`Update failed: ${msg}`);
-      setSavingCohort(null);
-    }
-  }
+  const [editing, setEditing] = useState<CustomerRow | null>(null);
+  const [savingCohortFor, setSavingCohortFor] = useState<string | null>(null);
 
   const rows: CustomerRow[] = useMemo(() => {
     const map = new Map<string, CustomerRow>();
@@ -132,6 +129,36 @@ export function CustomersTable({ projects }: { projects: Project[] }) {
     });
   }, [rows, query, cohort]);
 
+  async function changeCohort(row: CustomerRow, next: ParticipantCohort) {
+    if (row.cohort === next) return;
+    const key = dedupeKey(row.name, row.email === "—" ? "" : row.email);
+    setSavingCohortFor(key);
+    try {
+      const res = await fetch("/api/customers", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({
+          name: row.name,
+          email: row.email === "—" ? "" : row.email,
+          update: { cohort: next },
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`HTTP ${res.status}${body ? ` — ${body}` : ""}`);
+      }
+      const label = COHORT_OPTIONS.find((o) => o.value === next)?.label;
+      toast.success(`Moved ${row.name} to ${label}`);
+      router.refresh();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      toast.error(`Update failed: ${msg}`);
+    } finally {
+      setSavingCohortFor(null);
+    }
+  }
+
   async function confirmDelete() {
     if (!pending || deleting) return;
     setDeleting(true);
@@ -152,10 +179,11 @@ export function CustomersTable({ projects }: { projects: Project[] }) {
       const data = (await res.json()) as { removed?: number };
       toast.success(`Removed ${pending.name} (${data.removed ?? 0} entries)`);
       setPending(null);
-      window.location.assign("/");
+      router.refresh();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       toast.error(`Delete failed: ${msg}`);
+    } finally {
       setDeleting(false);
     }
   }
@@ -208,65 +236,67 @@ export function CustomersTable({ projects }: { projects: Project[] }) {
               <TableHead>Cohort</TableHead>
               <TableHead>Projects</TableHead>
               <TableHead className="text-right">#</TableHead>
-              <TableHead className="w-[44px]" />
+              <TableHead className="w-[88px]" />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((r, i) => (
-              <TableRow key={i}>
-                <TableCell className="font-medium">{r.name}</TableCell>
-                <TableCell>{r.company}</TableCell>
-                <TableCell className="text-muted-foreground">{r.email}</TableCell>
-                <TableCell>{r.role}</TableCell>
-                <TableCell>
-                  <Select
-                    value={r.cohort}
-                    onValueChange={(v) =>
-                      v && changeCohort(r, v as ParticipantCohort)
-                    }
-                    disabled={savingCohort === dedupeKey(r.name, r.email === "—" ? "" : r.email)}
-                  >
-                    <SelectTrigger size="sm" className="w-[150px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {COHORT_OPTIONS.map((o) => (
-                        <SelectItem key={o.value} value={o.value}>
-                          {o.label}
-                        </SelectItem>
+            {filtered.map((r, i) => {
+              const key = dedupeKey(r.name, r.email === "—" ? "" : r.email);
+              return (
+                <TableRow key={i}>
+                  <TableCell className="font-medium">{r.name}</TableCell>
+                  <TableCell>{r.company}</TableCell>
+                  <TableCell className="text-muted-foreground">{r.email}</TableCell>
+                  <TableCell>{r.role}</TableCell>
+                  <TableCell>
+                    <CohortPillSelect
+                      value={r.cohort}
+                      disabled={savingCohortFor === key}
+                      onChange={(next) => changeCohort(r, next)}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {r.projects.map((proj) => (
+                        <span
+                          key={proj}
+                          className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground"
+                        >
+                          {proj}
+                        </span>
                       ))}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap gap-1">
-                    {r.projects.map((proj) => (
-                      <span
-                        key={proj}
-                        className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground"
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right font-medium tabular-nums">
+                    {r.projects.length}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-0.5">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => setEditing(r)}
+                        aria-label={`Edit ${r.name}`}
+                        className="text-muted-foreground"
                       >
-                        {proj}
-                      </span>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell className="text-right font-medium tabular-nums">
-                  {r.projects.length}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => setPending(r)}
-                    aria-label={`Remove ${r.name}`}
-                    className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                  >
-                    <Trash2 className="size-3.5" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+                        <Pencil className="size-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => setPending(r)}
+                        aria-label={`Remove ${r.name}`}
+                        className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
@@ -311,6 +341,185 @@ export function CustomersTable({ projects }: { projects: Project[] }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <EditCustomerSheet
+        row={editing}
+        onClose={() => setEditing(null)}
+        onSaved={() => router.refresh()}
+      />
     </div>
+  );
+}
+
+function CohortPillSelect({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: ParticipantCohort;
+  disabled?: boolean;
+  onChange: (next: ParticipantCohort) => void;
+}) {
+  return (
+    <Select
+      value={value}
+      onValueChange={(v) => v && onChange(v as ParticipantCohort)}
+      disabled={disabled}
+    >
+      <SelectTrigger
+        size="sm"
+        className={cn(
+          "h-7 w-[150px] rounded-full border-0 px-2.5 text-[11px] font-medium ring-1 ring-inset focus-visible:ring-2",
+          COHORT_PILL[value],
+        )}
+      >
+        <SelectValue>{COHORT_LABEL_SHORT[value]}</SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {COHORT_OPTIONS.map((o) => (
+          <SelectItem key={o.value} value={o.value}>
+            {o.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function EditCustomerSheet({
+  row,
+  onClose,
+  onSaved,
+}: {
+  row: CustomerRow | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState("");
+  const [company, setCompany] = useState("");
+  const [cohort, setCohort] = useState<ParticipantCohort>("internal");
+  const [saving, setSaving] = useState(false);
+  const open = row !== null;
+
+  useEffect(() => {
+    if (!row) return;
+    setName(row.name);
+    setEmail(row.email === "—" ? "" : row.email);
+    setRole(row.role === "—" ? "" : row.role);
+    setCompany(row.company === "—" ? "" : row.company);
+    setCohort(row.cohort);
+  }, [row]);
+
+  async function save() {
+    if (!row) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/customers", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({
+          name: row.name,
+          email: row.email === "—" ? "" : row.email,
+          update: {
+            name: name.trim(),
+            email: email.trim(),
+            role: role.trim(),
+            company: company.trim(),
+            cohort,
+          },
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`HTTP ${res.status}${body ? ` — ${body}` : ""}`);
+      }
+      toast.success("Customer updated");
+      onSaved();
+      onClose();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      toast.error(`Save failed: ${msg}`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        if (!saving && !next) onClose();
+      }}
+    >
+      <SheetContent className="flex w-full flex-col gap-4 sm:max-w-[520px]">
+        <SheetHeader>
+          <SheetTitle>Edit customer</SheetTitle>
+          <SheetDescription>
+            Changes apply to every project this person is in
+            {row && row.projects.length > 0 ? (
+              <>
+                {" "}({row.projects.length}{" "}
+                {row.projects.length === 1 ? "project" : "projects"})
+              </>
+            ) : null}
+            .
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="flex flex-col gap-3 px-4">
+          <div className="flex flex-col gap-1">
+            <Label>Cohort</Label>
+            <Select
+              value={cohort}
+              onValueChange={(v) => v && setCohort(v as ParticipantCohort)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {COHORT_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+            <div className="flex flex-col gap-1">
+              <Label>Full name</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label>Role / Title</Label>
+              <Input value={role} onChange={(e) => setRole(e.target.value)} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label>{cohort === "internal" ? "Team" : "Company"}</Label>
+              <Input
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label>{cohort === "internal" ? "Slack handle" : "Email"}</Label>
+              <Input value={email} onChange={(e) => setEmail(e.target.value)} />
+            </div>
+          </div>
+        </div>
+
+        <SheetFooter className="flex-row justify-end gap-2">
+          <Button variant="outline" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button onClick={save} disabled={saving || !name.trim()}>
+            {saving ? "Saving…" : "Save"}
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }

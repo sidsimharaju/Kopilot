@@ -37,11 +37,11 @@ export function TopBar({
           <ShareButton projectHandle={handle} projectName={project?.S?.projectName} />
         ) : null}
         <a
-          href="https://calendar.google.com/calendar/u/0/r"
+          href="https://calendar.google.com/calendar/u/0/appointments/schedules/AcZssZ0bZDEAafZ3V3A1SbI4Vg8-G_Y6RcdKcTtwdesn2xTDBSG9eHwE2erp6lloTCz85Bz2s7XL-H6u"
           target="_blank"
           rel="noopener noreferrer"
           className="flex size-[30px] items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          aria-label="Open Google Calendar"
+          aria-label="Open booking page"
         >
           <Calendar className="size-3.5" />
         </a>

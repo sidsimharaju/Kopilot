@@ -62,15 +62,35 @@ ${participantData}
 Return the full JSON structure.`;
 }
 
+async function loadSkill(name: string): Promise<string> {
+  try {
+    const res = await fetch(`/api/skills/${name}`);
+    if (!res.ok) return "";
+    const data = (await res.json()) as { content?: string };
+    return data.content ?? "";
+  } catch {
+    return "";
+  }
+}
+
 export async function runAnalysis(
   project: Project,
 ): Promise<{ analysis: AnalysisResult; synthesis: Synthesis | null }> {
+  const skillName =
+    project.S.methodology === "discovery"
+      ? "synthesize-discovery-interview"
+      : "synthesize-usability-test";
+  const skillBody = await loadSkill(skillName);
+  const baseSystem = AGENT_SYSTEM;
+  const system = skillBody
+    ? `${skillBody}\n\n---\n\nOPERATIONAL FORMAT (overrides any output format described above):\n${baseSystem}`
+    : baseSystem;
   const prompt = buildAnalysisPrompt(project);
   const res = await fetch("/api/agent", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      system: AGENT_SYSTEM,
+      system,
       messages: [{ role: "user", content: prompt }],
       max_tokens: 4000,
     }),

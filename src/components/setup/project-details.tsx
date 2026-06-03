@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { DESIGNERS, RESEARCHERS } from "@/lib/constants";
+import { DESIGNERS } from "@/lib/constants";
 import type { ProjectState } from "@/lib/types";
 
 type Props = {
@@ -22,21 +22,20 @@ type Props = {
 
 export function ProjectDetails({ state, update }: Props) {
   const designers = state.designer ?? [];
-  const researchers = state.researcher ?? [];
 
-  function addPerson(field: "designer" | "researcher", name: string) {
+  function addDesigner(name: string) {
     if (!name) return;
     update((s) => {
-      const current = (s[field] as string[]) ?? [];
+      const current = s.designer ?? [];
       if (current.includes(name)) return s;
-      return { ...s, [field]: [...current, name] };
+      return { ...s, designer: [...current, name] };
     });
   }
 
-  function removePerson(field: "designer" | "researcher", name: string) {
+  function removeDesigner(name: string) {
     update((s) => {
-      const current = (s[field] as string[]) ?? [];
-      return { ...s, [field]: current.filter((n) => n !== name) };
+      const current = s.designer ?? [];
+      return { ...s, designer: current.filter((n) => n !== name) };
     });
   }
 
@@ -78,22 +77,13 @@ export function ProjectDetails({ state, update }: Props) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <PersonField
-            label="Designer"
-            options={DESIGNERS}
-            selected={designers}
-            onAdd={(n) => addPerson("designer", n)}
-            onRemove={(n) => removePerson("designer", n)}
-          />
-          <PersonField
-            label="Researcher"
-            options={RESEARCHERS}
-            selected={researchers}
-            onAdd={(n) => addPerson("researcher", n)}
-            onRemove={(n) => removePerson("researcher", n)}
-          />
-        </div>
+        <PersonField
+          label="Designer"
+          options={DESIGNERS}
+          selected={designers}
+          onAdd={addDesigner}
+          onRemove={removeDesigner}
+        />
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="f-purpose">Purpose</Label>

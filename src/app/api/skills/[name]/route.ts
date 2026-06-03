@@ -8,6 +8,8 @@ const ALLOWED_SKILLS = new Set([
   "synthesize-usability-test",
   "research-summary-report",
   "research-full-report",
+  "discovery-guide-SKILL",
+  "usability-guide-SKILL",
 ]);
 
 type Ctx = { params: Promise<{ name: string }> };
