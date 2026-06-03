@@ -83,6 +83,10 @@ export async function PATCH(req: NextRequest) {
       role?: string;
       company?: string;
       cohort?: string;
+      audience?: string;
+      hasCSM?: boolean;
+      csmName?: string;
+      csmContact?: string;
     };
     cohort?: string;
   };
@@ -154,6 +158,22 @@ export async function PATCH(req: NextRequest) {
           merged.type = newCohort === "internal" ? "internal" : "external";
           touched = true;
         }
+      }
+      if (update.audience !== undefined && update.audience !== p.audience) {
+        merged.audience = update.audience;
+        touched = true;
+      }
+      if (update.hasCSM !== undefined && update.hasCSM !== p.hasCSM) {
+        merged.hasCSM = update.hasCSM;
+        touched = true;
+      }
+      if (update.csmName !== undefined && update.csmName !== p.csmName) {
+        merged.csmName = update.csmName;
+        touched = true;
+      }
+      if (update.csmContact !== undefined && update.csmContact !== p.csmContact) {
+        merged.csmContact = update.csmContact;
+        touched = true;
       }
       if (touched) {
         changed = true;

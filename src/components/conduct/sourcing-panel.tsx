@@ -1,13 +1,14 @@
 "use client";
 
-import { useMemo } from "react";
-import { Copy, Sparkles } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ChevronDown, Copy, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import type { ProjectState } from "@/lib/types";
 
 type Props = {
@@ -76,6 +77,7 @@ const PROMPT_ROWS = 14;
 export function SourcingPanel({ state }: Props) {
   const rovo = useMemo(() => buildRovoPrompt(state), [state]);
   const hex = useMemo(() => buildHexPrompt(state), [state]);
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
     <Card className="border-chart-3/30 bg-chart-3/[0.04]">
@@ -84,7 +86,25 @@ export function SourcingPanel({ state }: Props) {
           <Sparkles className="size-4 text-chart-3" />
           Sourcing helpers
         </CardTitle>
+        <CardAction>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => setCollapsed((c) => !c)}
+            aria-label={collapsed ? "Expand sourcing helpers" : "Minimize sourcing helpers"}
+            className="text-muted-foreground"
+          >
+            <ChevronDown
+              className={cn(
+                "size-4 transition-transform",
+                collapsed && "-rotate-90",
+              )}
+            />
+          </Button>
+        </CardAction>
       </CardHeader>
+      {collapsed ? null : (
       <CardContent>
         <Tabs defaultValue="rovo">
           <TabsList>
@@ -123,6 +143,7 @@ export function SourcingPanel({ state }: Props) {
           </TabsContent>
         </Tabs>
       </CardContent>
+      )}
     </Card>
   );
 }

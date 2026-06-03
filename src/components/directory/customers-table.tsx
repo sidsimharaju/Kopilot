@@ -47,7 +47,26 @@ type CustomerRow = {
   role: string;
   email: string;
   cohort: ParticipantCohort;
+  audience: string;
+  hasCSM: boolean;
+  csmName: string;
+  csmContact: string;
   projects: string[];
+};
+
+const AUDIENCE_OPTIONS: Record<ParticipantCohort, Array<{ value: string; label: string }>> = {
+  internal: [
+    { value: "internal-fresh", label: "Fresh eyes — hasn't worked on this product" },
+    { value: "internal-adjacent", label: "Adjacent product" },
+    { value: "internal-rolematch", label: "Role match" },
+    { value: "se", label: "Solutions engineer" },
+    { value: "field-engineer", label: "Field / platform engineer" },
+  ],
+  customer: [
+    { value: "csm", label: "Via CSM" },
+    { value: "customer", label: "Customer (direct)" },
+  ],
+  noncustomer: [{ value: "noncustomer", label: "Non-Kong (Respondent)" }],
 };
 
 const COHORT_FILTERS: Array<{ value: string; label: string }> = [
@@ -111,6 +130,10 @@ export function CustomersTable({ projects }: { projects: Project[] }) {
             role: part.role ?? "—",
             email: email || "—",
             cohort: c,
+            audience: part.audience ?? AUDIENCE_OPTIONS[c][0].value,
+            hasCSM: Boolean(part.hasCSM),
+            csmName: part.csmName ?? "",
+            csmContact: part.csmContact ?? "",
             projects: [projectName],
           });
         }
@@ -400,8 +423,12 @@ function EditCustomerSheet({
   const [role, setRole] = useState("");
   const [company, setCompany] = useState("");
   const [cohort, setCohort] = useState<ParticipantCohort>("internal");
+  const [audience, setAudience] = useState<string>("");
+  const [csmName, setCsmName] = useState("");
+  const [csmContact, setCsmContact] = useState("");
   const [saving, setSaving] = useState(false);
   const open = row !== null;
+  const viaCSM = cohort === "customer" && audience === "csm";
 
   useEffect(() => {
     if (!row) return;
@@ -410,12 +437,22 @@ function EditCustomerSheet({
     setRole(row.role === "—" ? "" : row.role);
     setCompany(row.company === "—" ? "" : row.company);
     setCohort(row.cohort);
+    setAudience(row.audience || AUDIENCE_OPTIONS[row.cohort][0].value);
+    setCsmName(row.csmName);
+    setCsmContact(row.csmContact);
   }, [row]);
+
+  function changeCohort(next: ParticipantCohort) {
+    setCohort(next);
+    const valid = AUDIENCE_OPTIONS[next].some((o) => o.value === audience);
+    if (!valid) setAudience(AUDIENCE_OPTIONS[next][0].value);
+  }
 
   async function save() {
     if (!row) return;
     setSaving(true);
     try {
+      const hasCSM = cohort === "customer" && audience === "csm";
       const res = await fetch("/api/customers", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -429,6 +466,10 @@ function EditCustomerSheet({
             role: role.trim(),
             company: company.trim(),
             cohort,
+            audience,
+            hasCSM,
+            csmName: hasCSM ? csmName.trim() : "",
+            csmContact: hasCSM ? csmContact.trim() : "",
           },
         }),
       });
@@ -454,7 +495,7 @@ function EditCustomerSheet({
         if (!saving && !next) onClose();
       }}
     >
-      <SheetContent className="flex w-full flex-col gap-4 sm:max-w-[520px]">
+      <SheetContent className="flex w-full flex-col gap-4 sm:max-w-[560px]">
         <SheetHeader>
           <SheetTitle>Edit customer</SheetTitle>
           <SheetDescription>
@@ -474,7 +515,7 @@ function EditCustomerSheet({
             <Label>Cohort</Label>
             <Select
               value={cohort}
-              onValueChange={(v) => v && setCohort(v as ParticipantCohort)}
+              onValueChange={(v) => v && changeCohort(v as ParticipantCohort)}
             >
               <SelectTrigger className="w-full">
                 <SelectValue />
@@ -509,6 +550,48 @@ function EditCustomerSheet({
               <Input value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
           </div>
+
+          {cohort !== "noncustomer" ? (
+            <div className="flex flex-col gap-1">
+              <Label>Audience type</Label>
+              <Select
+                value={audience}
+                onValueChange={(v) => v && setAudience(v)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="min-w-[420px] max-w-[min(560px,calc(100vw-2rem))]">
+                  {AUDIENCE_OPTIONS[cohort].map((o) => (
+                    <SelectItem key={o.value} value={o.value} className="whitespace-normal">
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+
+          {viaCSM ? (
+            <div className="grid grid-cols-1 gap-2 border-t border-border pt-2 md:grid-cols-2">
+              <div className="flex flex-col gap-1">
+                <Label>CSM name</Label>
+                <Input
+                  value={csmName}
+                  onChange={(e) => setCsmName(e.target.value)}
+                  placeholder="Sarah Smith"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label>CSM Slack / email</Label>
+                <Input
+                  value={csmContact}
+                  onChange={(e) => setCsmContact(e.target.value)}
+                  placeholder="@sarah or sarah@konghq.com"
+                />
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <SheetFooter className="flex-row justify-end gap-2">
