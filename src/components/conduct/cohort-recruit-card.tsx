@@ -4,6 +4,16 @@ import { useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Card,
   CardAction,
   CardContent,
@@ -46,8 +56,10 @@ const COHORT_HELP: Record<ParticipantCohort, string> = {
 export function CohortRecruitCard({ cohort, state, pid, update, updateProject }: Props) {
   const [showAdd, setShowAdd] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [confirmId, setConfirmId] = useState<number | null>(null);
   const participants = (state.participants ?? []).filter((p) => p.cohort === cohort);
   const editing = participants.find((p) => p.id === editingId) ?? null;
+  const confirming = participants.find((p) => p.id === confirmId) ?? null;
 
   function addParticipant(data: Omit<Participant, "id">) {
     const newId = pid ?? 1;
@@ -143,12 +155,12 @@ export function CohortRecruitCard({ cohort, state, pid, update, updateProject }:
                   tabIndex={0}
                   onClick={(e) => {
                     e.stopPropagation();
-                    removeParticipant(p.id!);
+                    setConfirmId(p.id!);
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.stopPropagation();
-                      removeParticipant(p.id!);
+                      setConfirmId(p.id!);
                     }
                   }}
                   className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
@@ -172,6 +184,39 @@ export function CohortRecruitCard({ cohort, state, pid, update, updateProject }:
           onSave={(data) => updateParticipant(editing.id!, data)}
         />
       ) : null}
+
+      <AlertDialog
+        open={confirmId !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove participant?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirming?.name ? (
+                <>This removes <strong>{confirming.name}</strong> from this study.
+                This can&apos;t be undone.</>
+              ) : (
+                "This removes the participant from this study. This can't be undone."
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                if (confirmId !== null) removeParticipant(confirmId);
+                setConfirmId(null);
+              }}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

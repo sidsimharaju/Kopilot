@@ -1,8 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { Eye, Loader2, Paperclip, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Card,
   CardContent,
@@ -10,6 +21,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -17,6 +29,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { EditParticipantSheet } from "./edit-participant-sheet";
 import { MessagesPanel } from "./messages-panel";
 import {
@@ -27,6 +46,11 @@ import {
   STATUS_VALUES,
   initials,
 } from "@/lib/participant";
+import {
+  TRANSCRIPT_ACCEPT,
+  isSupportedTranscriptFile,
+  readTranscriptUpload,
+} from "@/lib/transcript";
 import { cn } from "@/lib/utils";
 import type {
   Participant,
@@ -42,8 +66,12 @@ type Props = {
 
 export function ManageTable({ state, update }: Props) {
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [confirmId, setConfirmId] = useState<number | null>(null);
+  const [previewId, setPreviewId] = useState<number | null>(null);
   const participants = state.participants ?? [];
   const editing = participants.find((p) => p.id === editingId) ?? null;
+  const confirming = participants.find((p) => p.id === confirmId) ?? null;
+  const previewing = participants.find((p) => p.id === previewId) ?? null;
 
   const metrics = {
     total: participants.length,
@@ -100,7 +128,7 @@ export function ManageTable({ state, update }: Props) {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] border-collapse text-[12.5px]">
+            <table className="w-full min-w-[1040px] border-collapse text-[12.5px]">
               <thead>
                 <tr className="text-left text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                   <th className="p-2">Name</th>
@@ -109,6 +137,7 @@ export function ManageTable({ state, update }: Props) {
                   <th className="p-2">Session link</th>
                   <th className="p-2">Password</th>
                   <th className="p-2">Doc link</th>
+                  <th className="p-2">Transcript</th>
                   <th className="w-[40px] p-2"></th>
                 </tr>
               </thead>
@@ -218,12 +247,19 @@ export function ManageTable({ state, update }: Props) {
                         className="h-7 text-[12px]"
                       />
                     </td>
+                    <td className="p-2">
+                      <TranscriptCell
+                        participant={p}
+                        onSet={(v) => setField(p.id!, "transcript", v)}
+                        onPreview={() => setPreviewId(p.id!)}
+                      />
+                    </td>
                     <td className="p-2 text-center">
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon-sm"
-                        onClick={() => remove(p.id!)}
+                        onClick={() => setConfirmId(p.id!)}
                         aria-label="Remove participant"
                         className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       >
@@ -237,6 +273,7 @@ export function ManageTable({ state, update }: Props) {
           </div>
         )}
       </CardContent>
+
       {editing ? (
         <EditParticipantSheet
           participant={editing}
@@ -248,7 +285,146 @@ export function ManageTable({ state, update }: Props) {
           onSave={(data) => saveEdit(editing.id!, data)}
         />
       ) : null}
+
+      <Sheet
+        open={previewId !== null}
+        onOpenChange={(open) => {
+          if (!open) setPreviewId(null);
+        }}
+      >
+        <SheetContent className="flex w-full flex-col gap-4 sm:max-w-[640px]">
+          <SheetHeader>
+            <SheetTitle>{previewing?.name || "Transcript"}</SheetTitle>
+            <SheetDescription>
+              {[previewing?.role, previewing?.company].filter(Boolean).join(" · ") ||
+                "Transcript preview"}
+            </SheetDescription>
+          </SheetHeader>
+          <ScrollArea className="min-h-0 flex-1 px-4 pb-4">
+            <pre className="whitespace-pre-wrap break-words font-sans text-[13px] leading-relaxed text-foreground">
+              {(previewing?.transcript || "").trim() || "No transcript attached."}
+            </pre>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
+
+      <AlertDialog
+        open={confirmId !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove participant?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirming?.name ? (
+                <>This removes <strong>{confirming.name}</strong> and any attached
+                transcript from this study. This can&apos;t be undone.</>
+              ) : (
+                "This removes the participant from this study. This can't be undone."
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                if (confirmId !== null) remove(confirmId);
+                setConfirmId(null);
+              }}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
+  );
+}
+
+function TranscriptCell({
+  participant,
+  onSet,
+  onPreview,
+}: {
+  participant: Participant;
+  onSet: (value: string) => void;
+  onPreview: () => void;
+}) {
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const hasTranscript = Boolean((participant.transcript || "").trim());
+  const chars = (participant.transcript ?? "").length;
+
+  async function handleFile(file: File | null | undefined) {
+    if (!file) return;
+    if (!isSupportedTranscriptFile(file.name)) {
+      toast.error("Unsupported file type. Use .txt, .docx, .vtt, or .srt.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const text = await readTranscriptUpload(file);
+      if (!text.trim()) {
+        toast.error("File was empty after parsing.");
+        return;
+      }
+      onSet(text);
+      toast.success(
+        `Loaded ${text.length.toLocaleString()} characters from ${file.name}`,
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      toast.error(`Upload failed: ${msg}`);
+    } finally {
+      setUploading(false);
+      if (fileInput.current) fileInput.current.value = "";
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <input
+        ref={fileInput}
+        type="file"
+        accept={TRANSCRIPT_ACCEPT}
+        className="hidden"
+        onChange={(e) => handleFile(e.target.files?.[0])}
+      />
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => fileInput.current?.click()}
+        disabled={uploading}
+        className="h-7 gap-1.5 text-[11.5px]"
+      >
+        {uploading ? (
+          <Loader2 className="size-3.5 animate-spin" />
+        ) : (
+          <Paperclip className="size-3.5" />
+        )}
+        {uploading
+          ? "Uploading…"
+          : hasTranscript
+            ? `${chars.toLocaleString()} chars`
+            : "Attach"}
+      </Button>
+      {hasTranscript ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          onClick={onPreview}
+          aria-label="Preview transcript"
+          className="text-muted-foreground"
+        >
+          <Eye className="size-3.5" />
+        </Button>
+      ) : null}
+    </div>
   );
 }
 

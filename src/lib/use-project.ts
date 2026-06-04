@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { setSaveStatus } from "./save-status-store";
 import type { Project, ProjectState } from "./types";
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
@@ -15,6 +16,16 @@ export function useProject(initial: Project) {
   useEffect(() => {
     latest.current = project;
   }, [project]);
+
+  // Mirror status into the shared store so the TopBar can show it beside the
+  // project title. Reset to idle when this editor unmounts (e.g. navigation).
+  useEffect(() => {
+    setSaveStatus(status);
+  }, [status]);
+
+  useEffect(() => {
+    return () => setSaveStatus("idle");
+  }, []);
 
   const save = useCallback(async () => {
     const current = latest.current;

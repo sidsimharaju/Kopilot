@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Calendar } from "lucide-react";
 import { PreviewSheet } from "./preview-sheet";
+import { SaveStatusBadge } from "./save-status-badge";
 import { ShareButton } from "./share-button";
 import { UserMenu } from "./user-menu";
 import type { Project, SessionUser } from "@/lib/types";
@@ -28,9 +29,10 @@ export function TopBar({
         </span>
         Kopilot
       </Link>
-      <h1 className="flex-1 truncate pl-[18px] text-sm font-medium tracking-tight">
-        {title}
-      </h1>
+      <div className="flex min-w-0 flex-1 items-center gap-2.5 pl-[18px]">
+        <h1 className="truncate text-sm font-medium tracking-tight">{title}</h1>
+        <SaveStatusBadge />
+      </div>
       <div className="flex items-center gap-2 pr-4">
         {project ? <PreviewSheet project={project} /> : null}
         {handle ? (

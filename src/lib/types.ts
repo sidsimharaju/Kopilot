@@ -82,6 +82,7 @@ export type ProjectState = {
   analysisResult?: AnalysisResult | null;
   synthesisResult?: Synthesis | null;
   synthesisRich?: string;
+  analysisSelection?: number[];
   messageTemplates?: MessageTemplates;
   reports?: { summary?: string; full?: string };
   [k: string]: unknown;

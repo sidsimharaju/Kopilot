@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,9 +11,7 @@ import type {
   FindingConfidence,
   ObjectiveFinding,
   ProjectState,
-  Synthesis,
 } from "@/lib/types";
-import { RichEditor } from "./rich-editor";
 
 const CONFIDENCE_TONE: Record<FindingConfidence, string> = {
   high: "bg-foreground text-background",
@@ -31,17 +29,10 @@ function mergeFindingText(f: ObjectiveFinding): string {
 
 type Props = {
   analysis: AnalysisResult | null | undefined;
-  synthesis: Synthesis | null | undefined;
-  synthesisRich: string | undefined;
   update: (mut: (s: ProjectState) => ProjectState) => void;
 };
 
-export function FindingsCards({
-  analysis,
-  synthesis,
-  synthesisRich,
-  update,
-}: Props) {
+export function FindingsCards({ analysis, update }: Props) {
   const participants = analysis?.participants ?? [];
   const [collapsed, setCollapsed] = useState<Record<number, boolean>>({});
 
@@ -57,19 +48,8 @@ export function FindingsCards({
     });
   }
 
-  function setSynthesisRich(value: string) {
-    update((s) => ({ ...s, synthesisRich: value }));
-  }
-
   return (
     <div className="flex flex-col gap-3">
-      {synthesis || synthesisRich ? (
-        <SynthesisCard
-          synthesis={synthesis}
-          synthesisRich={synthesisRich}
-          setSynthesisRich={setSynthesisRich}
-        />
-      ) : null}
       {participants.map((p, idx) => {
         const isCollapsed = collapsed[idx] === true;
         return (
@@ -147,84 +127,5 @@ export function FindingsCards({
         );
       })}
     </div>
-  );
-}
-
-function synthesisToMarkdown(s: Synthesis | null | undefined): string {
-  if (!s) return "";
-  const lines: string[] = [];
-  if (s.tldr?.trim()) {
-    lines.push("## TL;DR");
-    lines.push(s.tldr.trim());
-    lines.push("");
-  }
-  const themes = s.themes ?? [];
-  if (themes.length > 0) {
-    lines.push("## Themes");
-    themes.forEach((t) => {
-      if (!t.name && !t.description) return;
-      lines.push(`### ${t.name || "Untitled theme"}`);
-      if (t.description) lines.push(t.description);
-      if (t.participants) lines.push(`_Participants: ${t.participants}_`);
-      lines.push("");
-    });
-  }
-  const painPoints = (s.topPainPoints ?? []).filter((x) => x?.trim());
-  if (painPoints.length > 0) {
-    lines.push("## Top pain points");
-    painPoints.forEach((p) => lines.push(`- ${p}`));
-    lines.push("");
-  }
-  const recs = (s.recommendations ?? []).filter((x) => x?.trim());
-  if (recs.length > 0) {
-    lines.push("## Recommendations");
-    recs.forEach((r) => lines.push(`- ${r}`));
-    lines.push("");
-  }
-  const open = (s.openQuestions ?? []).filter((x) => x?.trim());
-  if (open.length > 0) {
-    lines.push("## Open questions");
-    open.forEach((o) => lines.push(`- ${o}`));
-    lines.push("");
-  }
-  return lines.join("\n").trim();
-}
-
-function SynthesisCard({
-  synthesis,
-  synthesisRich,
-  setSynthesisRich,
-}: {
-  synthesis: Synthesis | null | undefined;
-  synthesisRich: string | undefined;
-  setSynthesisRich: (value: string) => void;
-}) {
-  const hasRich = Boolean(synthesisRich && synthesisRich.trim());
-
-  useEffect(() => {
-    if (!hasRich && synthesis) {
-      const md = synthesisToMarkdown(synthesis);
-      if (md) setSynthesisRich(md);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const value = hasRich ? synthesisRich! : synthesisToMarkdown(synthesis);
-
-  return (
-    <Card className="bg-muted/40">
-      <CardHeader>
-        <CardTitle>Synthesis</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <RichEditor
-          value={value}
-          onChange={setSynthesisRich}
-          placeholder="Write the cross-interview synthesis here. Use headings and bullets to structure it."
-          minHeight="280px"
-          maxHeight="640px"
-        />
-      </CardContent>
-    </Card>
   );
 }

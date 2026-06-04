@@ -26,11 +26,21 @@ function looksLikeHtml(value: string): boolean {
   return /<\w+[^>]*>/.test(value);
 }
 
+// If the whole value is a single fenced code block (e.g. an LLM wrapped its
+// markdown answer in ```markdown … ```), unwrap it so it renders as formatted
+// text instead of a raw code block.
+function stripWrappingFence(value: string): string {
+  const trimmed = value.trim();
+  const match = trimmed.match(/^```[^\n]*\n([\s\S]*?)\n?```$/);
+  return match ? match[1] : value;
+}
+
 function ensureHtml(value: string): string {
   if (!value) return "";
-  if (looksLikeHtml(value)) return value;
+  const unwrapped = stripWrappingFence(value);
+  if (looksLikeHtml(unwrapped)) return unwrapped;
   // Treat as markdown and convert once.
-  const html = marked.parse(value, { async: false }) as string;
+  const html = marked.parse(unwrapped, { async: false }) as string;
   return html;
 }
 

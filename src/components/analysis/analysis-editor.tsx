@@ -1,34 +1,49 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { SaveIndicator } from "@/components/setup/save-indicator";
 import { runAnalysis } from "@/lib/analyze";
 import { useProject } from "@/lib/use-project";
 import type { Project } from "@/lib/types";
+import { AnalysisSelectionPanel } from "./analysis-selection-panel";
 import { FindingsCards } from "./findings-cards";
 import { ReportsPanel } from "./reports-panel";
-import { TranscriptsPanel } from "./transcripts-panel";
 
 export function AnalysisEditor({ initial }: { initial: Project }) {
-  const { project, status, update } = useProject(initial);
+  const { project, update } = useProject(initial);
   const [analyzing, setAnalyzing] = useState(false);
 
   const participants = project.S.participants ?? [];
-  const participantsWithTranscripts = participants.filter(
+  const withTranscripts = participants.filter(
     (p) => (p.transcript || "").trim().length > 0,
   );
-  const hasTranscripts = participantsWithTranscripts.length > 0;
+  const transcriptIds = withTranscripts.map((p) => p.id!);
+  const selectedIds = project.S.analysisSelection ?? transcriptIds;
+  const effectiveSelected = selectedIds.filter((id) => transcriptIds.includes(id));
+
   const hasAnalysis =
     (project.S.analysisResult?.participants?.length ?? 0) > 0 ||
     Boolean(project.S.synthesisResult);
 
+  function setSelection(ids: number[]) {
+    update((s) => ({ ...s, analysisSelection: ids }));
+  }
+
+  function toggle(id: number, checked: boolean) {
+    const base = project.S.analysisSelection ?? transcriptIds;
+    const next = checked
+      ? Array.from(new Set([...base, id]))
+      : base.filter((x) => x !== id);
+    setSelection(next);
+  }
+
+  function selectAll(checked: boolean) {
+    setSelection(checked ? transcriptIds : []);
+  }
+
   async function analyze() {
-    if (!hasTranscripts) {
-      toast.error("Add at least one transcript first");
+    if (effectiveSelected.length === 0) {
+      toast.error("Select at least one participant with a transcript");
       return;
     }
     setAnalyzing(true);
@@ -49,61 +64,22 @@ export function AnalysisEditor({ initial }: { initial: Project }) {
   }
 
   return (
-    <div className="relative flex flex-col gap-3.5">
-      <div className="pointer-events-none absolute right-0 -top-4 z-10">
-        <SaveIndicator status={status} />
-      </div>
+    <div className="flex flex-col gap-3.5">
+      <AnalysisSelectionPanel
+        participants={withTranscripts}
+        selectedIds={effectiveSelected}
+        onToggle={toggle}
+        onSelectAll={selectAll}
+        analyzing={analyzing}
+        hasAnalysis={hasAnalysis}
+        onAnalyze={analyze}
+      />
 
-      <TranscriptsPanel state={project.S} update={update} />
+      {hasAnalysis ? (
+        <FindingsCards analysis={project.S.analysisResult} update={update} />
+      ) : null}
 
-      {!hasAnalysis ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-3 px-6 py-10 text-center">
-            <div className="text-[20px]">🔬</div>
-            <div className="text-[15px] font-medium">Create analysis</div>
-            <div className="max-w-md text-[12.5px] text-muted-foreground">
-              Once you have transcripts above, click below to map findings to your
-              learning objectives and generate a cross-interview synthesis.
-            </div>
-            <Button
-              onClick={analyze}
-              disabled={!hasTranscripts || analyzing}
-              className="gap-1.5"
-            >
-              <Sparkles className="size-4" />
-              {analyzing ? "Analyzing…" : "Create analysis"}
-            </Button>
-            {!hasTranscripts ? (
-              <div className="text-[11.5px] text-muted-foreground">
-                Paste or upload at least one transcript above to enable analysis.
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          <div className="flex justify-end">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={analyze}
-              disabled={analyzing}
-              className="gap-1.5"
-            >
-              <Sparkles className="size-3.5" />
-              {analyzing ? "Re-analyzing…" : "Re-analyze"}
-            </Button>
-          </div>
-          <FindingsCards
-            analysis={project.S.analysisResult}
-            synthesis={project.S.synthesisResult}
-            synthesisRich={project.S.synthesisRich}
-            update={update}
-          />
-        </>
-      )}
-
-      {hasTranscripts ? <ReportsPanel project={project} update={update} /> : null}
+      {hasAnalysis ? <ReportsPanel project={project} update={update} /> : null}
     </div>
   );
 }

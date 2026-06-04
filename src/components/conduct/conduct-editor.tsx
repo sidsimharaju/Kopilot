@@ -1,12 +1,15 @@
 "use client";
 
+import { useState } from "react";
+import Link from "next/link";
+import { ArrowRight, MessageSquarePlus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProject } from "@/lib/use-project";
 import type { Cohort, Project, ParticipantCohort } from "@/lib/types";
 import { CohortRecruitCard } from "./cohort-recruit-card";
 import { ManageTable } from "./manage-table";
 import { SourcingPanel } from "./sourcing-panel";
-import { SaveIndicator } from "@/components/setup/save-indicator";
 
 const COHORT_TO_PARTICIPANT: Record<Cohort, ParticipantCohort> = {
   internal: "internal",
@@ -23,18 +26,15 @@ const COHORT_TAB_LABEL: Record<Cohort, string> = {
 const COHORT_ORDER: Cohort[] = ["internal", "customers", "noncustomers"];
 
 export function ConductEditor({ initial }: { initial: Project }) {
-  const { project, status, update, updateProject } = useProject(initial);
+  const { project, update, updateProject } = useProject(initial);
+  const [tab, setTab] = useState("recruit");
   const selectedCohorts = COHORT_ORDER.filter(
     (c) => (project.S.cohorts ?? {})[c],
   );
 
   return (
-    <div className="relative flex flex-col gap-3.5">
-      <div className="pointer-events-none absolute right-0 -top-4 z-10">
-        <SaveIndicator status={status} />
-      </div>
-
-      <Tabs defaultValue="recruit" className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3.5">
+      <Tabs value={tab} onValueChange={setTab} className="flex flex-col gap-3">
         <TabsList className="w-fit">
           <TabsTrigger value="recruit">Conduct</TabsTrigger>
           <TabsTrigger value="manage">
@@ -78,10 +78,29 @@ export function ConductEditor({ initial }: { initial: Project }) {
               ))}
             </Tabs>
           )}
+
+          {selectedCohorts.length > 0 ? (
+            <div className="flex justify-end">
+              <Button onClick={() => setTab("manage")} className="gap-1.5">
+                <MessageSquarePlus className="size-4" />
+                Schedule messaging
+                <ArrowRight className="size-4" />
+              </Button>
+            </div>
+          ) : null}
         </TabsContent>
 
-        <TabsContent value="manage">
+        <TabsContent value="manage" className="flex flex-col gap-3">
           <ManageTable state={project.S} update={update} />
+          <div className="flex justify-end">
+            <Button
+              render={<Link href={`/projects/${project.id}/analysis`} />}
+              className="gap-1.5"
+            >
+              Go to analysis
+              <ArrowRight className="size-4" />
+            </Button>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

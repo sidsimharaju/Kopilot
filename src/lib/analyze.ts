@@ -1,12 +1,25 @@
 import type {
   AnalysisResult,
   ObjectiveFinding,
+  Participant,
   ParticipantAnalysis,
   Project,
   Synthesis,
 } from "./types";
 
 const TRANSCRIPT_CHAR_LIMIT = 5000;
+
+// Participants the user has chosen to include in analysis. Only people with a
+// transcript are eligible; an undefined selection means "all eligible".
+export function selectedTranscriptParticipants(project: Project): Participant[] {
+  const withTranscript = (project.S.participants ?? []).filter(
+    (p) => (p.transcript || "").trim().length > 0,
+  );
+  const sel = project.S.analysisSelection;
+  if (!sel) return withTranscript;
+  const set = new Set(sel);
+  return withTranscript.filter((p) => set.has(p.id as number));
+}
 
 const AGENT_SYSTEM = `You are a research operations assistant.
 
@@ -17,9 +30,7 @@ Response schemas:
 
 export function buildAnalysisPrompt(project: Project): string {
   const S = project.S;
-  const completed = (S.participants ?? []).filter(
-    (p) => (p.transcript || "").trim().length > 0,
-  );
+  const completed = selectedTranscriptParticipants(project);
   const participantData =
     completed.length === 0
       ? "No completed interviews. Return {\"participants\":[],\"synthesis\":null}."
@@ -148,9 +159,7 @@ export async function generateReport(
 
   const S = project.S;
   const TRANSCRIPT_LIMIT = 6000;
-  const completed = (S.participants ?? []).filter(
-    (p) => (p.transcript || "").trim().length > 0,
-  );
+  const completed = selectedTranscriptParticipants(project);
   const participantData = completed
     .map((p) => {
       const raw = p.transcript || "";
@@ -189,14 +198,14 @@ ${analysisJson}
 INTERVIEWS:
 ${participantData || "(none)"}
 
-Write the report in markdown.`;
+Write the report in markdown. Output only the markdown itself — do not wrap the whole response in code fences (no \`\`\`markdown … \`\`\`).`;
 
   const res = await fetch("/api/agent", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       system:
-        "You are a research operations assistant. Return clear, well-structured markdown.",
+        "You are a research operations assistant. Return clear, well-structured markdown. Never wrap the entire response in a code fence.",
       messages: [{ role: "user", content: userPrompt }],
       max_tokens: type === "full" ? 4000 : 2000,
     }),
@@ -208,5 +217,14 @@ Write the report in markdown.`;
   const data = (await res.json()) as {
     content?: Array<{ type: string; text?: string }>;
   };
-  return data.content?.find((b) => b.type === "text")?.text || "";
+  const raw = data.content?.find((b) => b.type === "text")?.text || "";
+  return stripWrappingFence(raw);
+}
+
+// Unwrap a response that's entirely a single fenced code block, so reports
+// render as formatted text rather than a raw markdown code block.
+function stripWrappingFence(value: string): string {
+  const trimmed = value.trim();
+  const match = trimmed.match(/^```[^\n]*\n([\s\S]*?)\n?```$/);
+  return match ? match[1].trim() : trimmed;
 }
