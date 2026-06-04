@@ -30,6 +30,7 @@ const STATUS_CLS: Record<string, string> = {
   progress: "bg-chart-4/20 text-chart-4",
   done: "bg-chart-2/15 text-chart-2",
   analysis: "bg-chart-3/15 text-chart-3",
+  completed: "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-400",
 };
 
 export function ProjectCard({ project }: { project: Project }) {

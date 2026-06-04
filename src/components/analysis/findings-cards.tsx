@@ -87,40 +87,49 @@ export function FindingsCards({ analysis, update }: Props) {
               </CardTitle>
             </CardHeader>
             {!isCollapsed ? (
-              <CardContent className="flex max-h-[520px] flex-col gap-3 overflow-y-auto">
-                {(p.byObjective ?? []).map((f, i) => (
-                  <div
-                    key={i}
-                    className="rounded border border-border bg-background p-3"
-                  >
-                    <div className="mb-1.5 flex items-start justify-between gap-3">
-                      <div className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-                        Objective {i + 1}
-                      </div>
-                      {f.confidence ? (
-                        <span
-                          className={cn(
-                            "rounded-full px-1.5 py-0.5 text-[10px] font-medium",
-                            CONFIDENCE_TONE[f.confidence],
-                          )}
-                        >
-                          {f.confidence}
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="mb-2 text-[13px] font-medium">{f.objective}</div>
-                    <Textarea
-                      rows={5}
-                      defaultValue={mergeFindingText(f)}
-                      placeholder="No finding yet."
-                      onBlur={(e) => setFinding(idx, i, e.target.value)}
-                    />
-                    <p className="mt-1 text-[10.5px] text-muted-foreground">
-                      Quotes are inlined as &gt; &ldquo;…&rdquo;. Delete or edit them
-                      freely.
-                    </p>
-                  </div>
-                ))}
+              <CardContent className="max-h-[520px] overflow-y-auto">
+                <table className="w-full border-collapse text-[13px]">
+                  <thead>
+                    <tr className="text-left text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                      <th className="w-[34%] p-2">Objective</th>
+                      <th className="p-2">Learning</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(p.byObjective ?? []).map((f, i) => (
+                      <tr key={i} className="border-t border-border align-top">
+                        <td className="p-2">
+                          <div className="flex flex-col gap-1.5">
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                              Objective {i + 1}
+                            </span>
+                            <span className="text-[12.5px] font-medium">
+                              {f.objective}
+                            </span>
+                            {f.confidence ? (
+                              <span
+                                className={cn(
+                                  "w-fit rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                                  CONFIDENCE_TONE[f.confidence],
+                                )}
+                              >
+                                {f.confidence}
+                              </span>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td className="p-2">
+                          <Textarea
+                            rows={5}
+                            defaultValue={mergeFindingText(f)}
+                            placeholder="No finding yet."
+                            onBlur={(e) => setFinding(idx, i, e.target.value)}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </CardContent>
             ) : null}
           </Card>

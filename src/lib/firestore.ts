@@ -19,3 +19,4 @@ if (process.env.NODE_ENV !== "production") {
 
 export const projects = () => db.collection("projects");
 export const featureRequests = () => db.collection("featureRequests");
+export const customers = () => db.collection("customers");

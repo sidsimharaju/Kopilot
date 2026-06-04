@@ -85,6 +85,7 @@ export type ProjectState = {
   analysisSelection?: number[];
   messageTemplates?: MessageTemplates;
   reports?: { summary?: string; full?: string };
+  completedAt?: string | null;
   [k: string]: unknown;
 };
 
@@ -140,6 +141,23 @@ export type Project = {
   pid?: number;
   oid?: number;
   spid?: number;
+};
+
+// A customer preserved in its own collection so it survives the hard-delete of
+// the project it was added in. Shown alongside live (project-derived) customers.
+export type ArchivedCustomer = {
+  id: string;
+  name?: string;
+  email?: string;
+  company?: string;
+  role?: string;
+  cohort?: ParticipantCohort;
+  audience?: string;
+  hasCSM?: boolean;
+  csmName?: string;
+  csmContact?: string;
+  projects?: string[];
+  archivedAt?: string;
 };
 
 export type SessionUser = {

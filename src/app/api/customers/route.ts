@@ -3,7 +3,16 @@ import { revalidatePath } from "next/cache";
 import type { NextRequest } from "next/server";
 import { projects } from "@/lib/firestore";
 import { requireUser } from "@/lib/auth";
-import type { Participant, ParticipantCohort, Project } from "@/lib/types";
+import {
+  removeArchivedCustomer,
+  updateArchivedCustomer,
+} from "@/lib/customers";
+import type {
+  ArchivedCustomer,
+  Participant,
+  ParticipantCohort,
+  Project,
+} from "@/lib/types";
 
 const ALLOWED_COHORTS: ReadonlySet<ParticipantCohort> = new Set([
   "internal",
@@ -67,6 +76,9 @@ export async function DELETE(req: NextRequest) {
       updatedAt: new Date().toISOString(),
     });
   }
+
+  // Also remove from archived (deleted-project) customers.
+  removed += await removeArchivedCustomer(body.name ?? "", body.email ?? "");
 
   revalidatePath("/");
   return NextResponse.json({ ok: true, removed, affectedProjects });
@@ -188,6 +200,25 @@ export async function PATCH(req: NextRequest) {
       "S.participants": next,
       updatedAt: new Date().toISOString(),
     });
+  }
+
+  // Also apply the update to archived (deleted-project) customers.
+  const archivedUpdate: Partial<ArchivedCustomer> = {};
+  if (update.name !== undefined) archivedUpdate.name = update.name;
+  if (update.email !== undefined) archivedUpdate.email = update.email;
+  if (update.role !== undefined) archivedUpdate.role = update.role;
+  if (update.company !== undefined) archivedUpdate.company = update.company;
+  if (update.cohort) archivedUpdate.cohort = update.cohort as ParticipantCohort;
+  if (update.audience !== undefined) archivedUpdate.audience = update.audience;
+  if (update.hasCSM !== undefined) archivedUpdate.hasCSM = update.hasCSM;
+  if (update.csmName !== undefined) archivedUpdate.csmName = update.csmName;
+  if (update.csmContact !== undefined) archivedUpdate.csmContact = update.csmContact;
+  if (Object.keys(archivedUpdate).length > 0) {
+    updated += await updateArchivedCustomer(
+      body.name ?? "",
+      body.email ?? "",
+      archivedUpdate,
+    );
   }
 
   revalidatePath("/");

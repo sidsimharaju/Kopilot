@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Calendar } from "lucide-react";
+import { CompleteToggle } from "./complete-toggle";
 import { PreviewSheet } from "./preview-sheet";
 import { SaveStatusBadge } from "./save-status-badge";
 import { ShareButton } from "./share-button";
@@ -34,6 +35,12 @@ export function TopBar({
         <SaveStatusBadge />
       </div>
       <div className="flex items-center gap-2 pr-4">
+        {project ? (
+          <CompleteToggle
+            projectId={project.id}
+            completed={Boolean(project.S?.completedAt)}
+          />
+        ) : null}
         {project ? <PreviewSheet project={project} /> : null}
         {handle ? (
           <ShareButton projectHandle={handle} projectName={project?.S?.projectName} />

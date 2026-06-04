@@ -2,11 +2,14 @@ import type { ProjectState } from "./types";
 
 export type ProjectStatus = {
   label: string;
-  cls: "draft" | "planning" | "progress" | "done" | "analysis";
+  cls: "draft" | "planning" | "progress" | "done" | "analysis" | "completed";
 };
 
 export function deriveStatus(state: ProjectState | undefined): ProjectStatus {
   const s = state ?? {};
+  if (s.completedAt) {
+    return { label: "Completed", cls: "completed" };
+  }
   const analysis = s.analysisResult as { participants?: unknown[] } | undefined;
   if (Array.isArray(analysis?.participants) && analysis.participants.length) {
     return { label: "Analysis", cls: "analysis" };

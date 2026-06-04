@@ -18,7 +18,7 @@ import { NewProjectButton } from "@/components/directory/new-project-button";
 import { ProjectCard } from "@/components/directory/project-card";
 import { UserMenu } from "@/components/shell/user-menu";
 import { deriveStatus } from "@/lib/project-status";
-import type { Project, SessionUser } from "@/lib/types";
+import type { ArchivedCustomer, Project, SessionUser } from "@/lib/types";
 
 const STATUS_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "all", label: "All statuses" },
@@ -27,6 +27,7 @@ const STATUS_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "progress", label: "Recruiting" },
   { value: "done", label: "Interviews" },
   { value: "analysis", label: "Analysis" },
+  { value: "completed", label: "Completed" },
 ];
 
 const METHOD_OPTIONS: Array<{ value: string; label: string }> = [
@@ -37,10 +38,11 @@ const METHOD_OPTIONS: Array<{ value: string; label: string }> = [
 
 type Props = {
   projects: Project[];
+  archivedCustomers?: ArchivedCustomer[];
   user: SessionUser;
 };
 
-export function DirectoryShell({ projects, user }: Props) {
+export function DirectoryShell({ projects, archivedCustomers = [], user }: Props) {
   const [tab, setTab] = useState("projects");
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
@@ -180,7 +182,7 @@ export function DirectoryShell({ projects, user }: Props) {
               Every customer and non-Kong participant logged across projects.
             </p>
           </header>
-          <CustomersTable projects={projects} />
+          <CustomersTable projects={projects} archived={archivedCustomers} />
         </TabsContent>
       </main>
     </Tabs>

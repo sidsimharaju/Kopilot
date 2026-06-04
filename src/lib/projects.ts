@@ -115,5 +115,17 @@ export async function saveProjectByShareToken(
 }
 
 export async function deleteProject(id: string): Promise<void> {
-  await projects().doc(id).update({ deletedAt: new Date().toISOString() });
+  await projects().doc(id).delete();
+}
+
+export async function setProjectCompleted(
+  id: string,
+  completed: boolean,
+): Promise<void> {
+  await projects()
+    .doc(id)
+    .update({
+      "S.completedAt": completed ? new Date().toISOString() : null,
+      updatedAt: new Date().toISOString(),
+    });
 }

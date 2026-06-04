@@ -9,11 +9,13 @@ export function isSupportedTranscriptFile(name: string): boolean {
 }
 
 function stripCaptionMarkup(input: string): string {
+  // Keep the cue timestamps (e.g. "00:00:01.000 --> 00:00:05.000") so they
+  // show in the transcript; only strip the WEBVTT header, cue numbers, and
+  // inline markup tags.
   return input
     .replace(/\r\n/g, "\n")
     .replace(/^WEBVTT.*$/im, "")
     .replace(/^\d+\s*$/gm, "")
-    .replace(/^\d{1,2}:\d{2}(?::\d{2})?(?:[.,]\d{1,3})?\s*-->\s*\d{1,2}:\d{2}(?::\d{2})?(?:[.,]\d{1,3})?.*$/gm, "")
     .replace(/<[^>]+>/g, "")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
