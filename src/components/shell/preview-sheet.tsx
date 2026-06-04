@@ -13,7 +13,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { COHORT_LABEL } from "@/lib/constants";
 import type { Project, ProjectState } from "@/lib/types";
 
@@ -197,44 +196,48 @@ export function PreviewSheet({ project }: { project: Project }) {
     [project],
   );
 
-  async function copy(text: string, label = "Copied") {
+  // Copy the plan in its rendered format: rich HTML (so pasting keeps the
+  // formatting) with a plain-text fallback.
+  async function writeRich() {
+    const clip = (
+      window as unknown as { ClipboardItem?: typeof ClipboardItem }
+    ).ClipboardItem;
+    if (clip && navigator.clipboard && "write" in navigator.clipboard) {
+      await navigator.clipboard.write([
+        new clip({
+          "text/html": new Blob([docsHtml], { type: "text/html" }),
+          "text/plain": new Blob([markdown], { type: "text/plain" }),
+        }),
+      ]);
+    } else {
+      await navigator.clipboard.writeText(markdown);
+    }
+  }
+
+  async function copyRich() {
     try {
-      await navigator.clipboard.writeText(text);
-      toast.success(label);
+      await writeRich();
+      toast.success("Copied. Paste to keep the formatting.");
     } catch {
       toast.error("Copy failed");
     }
   }
 
   async function addToGoogleDocs() {
-    const html = buildDocsHTML(project, { standalone: false });
-    const plain = buildMarkdown(project);
     try {
-      const clip = (
-        window as unknown as { ClipboardItem?: typeof ClipboardItem }
-      ).ClipboardItem;
-      if (clip && navigator.clipboard && "write" in navigator.clipboard) {
-        await navigator.clipboard.write([
-          new clip({
-            "text/html": new Blob([html], { type: "text/html" }),
-            "text/plain": new Blob([plain], { type: "text/plain" }),
-          }),
-        ]);
-      } else {
-        await navigator.clipboard.writeText(plain);
-      }
+      await writeRich();
       window.open("https://docs.new", "_blank", "noopener,noreferrer");
       toast.success("Formatted content copied. Paste (Cmd+V) into the new Doc.");
     } catch {
-      toast.error("Could not copy. Use Copy below and paste into a Doc.");
+      toast.error("Could not copy. Use Copy and paste into a Doc.");
     }
   }
 
-  function download() {
+  function downloadPdf() {
     const html = buildDocsHTML(project, { standalone: true });
     const win = window.open("", "_blank");
     if (!win) {
-      toast.error("Popup blocked. Allow popups to print.");
+      toast.error("Popup blocked. Allow popups to download the PDF.");
       return;
     }
     win.document.open();
@@ -242,21 +245,6 @@ export function PreviewSheet({ project }: { project: Project }) {
     win.document.close();
     win.focus();
     setTimeout(() => win.print(), 250);
-  }
-
-  function downloadMarkdown() {
-    const blob = new Blob([markdown], { type: "text/markdown" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    const slug =
-      (project.S?.projectName || "research-plan")
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "") || "research-plan";
-    a.href = url;
-    a.download = `${slug}.md`;
-    a.click();
-    URL.revokeObjectURL(url);
   }
 
   return (
@@ -273,48 +261,28 @@ export function PreviewSheet({ project }: { project: Project }) {
         <SheetHeader>
           <SheetTitle>{project.S?.projectName || "Untitled research"}</SheetTitle>
           <SheetDescription>
-            Formatted research plan — view as a Google Doc or as Markdown.
+            Formatted research plan — styled like a Google Doc.
           </SheetDescription>
         </SheetHeader>
 
-        <Tabs defaultValue="gdoc" className="flex flex-1 flex-col gap-3 overflow-hidden px-4">
-          <TabsList className="w-fit">
-            <TabsTrigger value="gdoc">Google Docs</TabsTrigger>
-            <TabsTrigger value="md">Markdown</TabsTrigger>
-          </TabsList>
-
-          <TabsContent
-            value="gdoc"
-            className="flex-1 overflow-hidden"
-          >
-            <div className="h-full overflow-y-auto rounded-md border border-border bg-card">
-              <div
-                className="px-10 py-8 text-[#202124] [font-family:'Google_Sans','Helvetica_Neue',Arial,sans-serif] [&_h1]:mb-3 [&_h1]:text-[26pt] [&_h1]:font-normal [&_h2]:mt-6 [&_h2]:mb-2 [&_h2]:text-[16pt] [&_h2]:font-normal [&_h2]:text-[#1a73e8] [&_h3]:mt-4 [&_h3]:mb-1 [&_h3]:text-[12pt] [&_h3]:font-semibold [&_li]:my-1 [&_li]:text-[11pt] [&_li]:leading-[1.55] [&_p]:text-[11pt] [&_p]:leading-[1.55] [&_ul]:list-disc [&_ul]:pl-6"
-                dangerouslySetInnerHTML={{ __html: docsHtml }}
-              />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="md" className="flex-1 overflow-hidden">
-            <pre className="h-full overflow-y-auto whitespace-pre-wrap break-words rounded-md border border-border bg-card p-4 font-mono text-[12.5px] leading-relaxed">
-              {markdown}
-            </pre>
-          </TabsContent>
-        </Tabs>
+        <div className="flex flex-1 flex-col overflow-hidden px-4">
+          <div className="h-full overflow-y-auto rounded-md border border-border bg-card">
+            <div
+              className="px-10 py-8 text-[#202124] [font-family:'Google_Sans','Helvetica_Neue',Arial,sans-serif] [&_h1]:mb-3 [&_h1]:text-[26pt] [&_h1]:font-normal [&_h2]:mt-6 [&_h2]:mb-2 [&_h2]:text-[16pt] [&_h2]:font-normal [&_h2]:text-[#1a73e8] [&_h3]:mt-4 [&_h3]:mb-1 [&_h3]:text-[12pt] [&_h3]:font-semibold [&_li]:my-1 [&_li]:text-[11pt] [&_li]:leading-[1.55] [&_p]:text-[11pt] [&_p]:leading-[1.55] [&_ul]:list-disc [&_ul]:pl-6"
+              dangerouslySetInnerHTML={{ __html: docsHtml }}
+            />
+          </div>
+        </div>
 
         <SheetFooter className="flex-row flex-wrap justify-between gap-2">
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => copy(markdown, "Markdown copied")}>
+            <Button variant="outline" onClick={copyRich}>
               <Copy className="size-4" />
-              Copy Markdown
+              Copy
             </Button>
-            <Button variant="outline" onClick={downloadMarkdown}>
+            <Button variant="outline" onClick={downloadPdf}>
               <Download className="size-4" />
-              Download .md
-            </Button>
-            <Button variant="outline" onClick={download}>
-              <Download className="size-4" />
-              Print / PDF
+              Download PDF
             </Button>
           </div>
           <Button onClick={addToGoogleDocs}>
