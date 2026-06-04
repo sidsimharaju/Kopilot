@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Copy, Download, FileText, Eye } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Copy, Download, Eye, FileText } from "lucide-react";
+import { marked } from "marked";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +14,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { RichEditor } from "@/components/analysis/rich-editor";
 import { COHORT_LABEL } from "@/lib/constants";
 import type { Project, ProjectState } from "@/lib/types";
 
@@ -104,15 +106,14 @@ function buildSections(project: Project): Section[] {
   if (participants.length > 0) {
     sections.push({
       heading: "Participants",
-      list: participants.map((p, i) => {
+      // Render participants as a table for an at-a-glance roster.
+      rows: participants.map((p) => {
+        const who = `${val(p.name) || "—"}${p.role ? " · " + p.role : ""}${p.company ? " · " + p.company : ""}`;
         const csmNote =
           p.cohort === "customer" && p.hasCSM && p.csmName
-            ? ` · via CSM ${p.csmName}`
+            ? ` (via CSM ${p.csmName})`
             : "";
-        return {
-          heading: `${i + 1}. ${val(p.name) || "—"}${p.role ? " · " + p.role : ""}${p.company ? " · " + p.company : ""}${csmNote}`,
-          lines: p.status ? [`Status: ${p.status}`] : [],
-        };
+        return [who, `${p.status ?? "—"}${csmNote}`] as [string, string];
       }),
     });
   }
@@ -126,91 +127,78 @@ function buildMarkdown(project: Project): string {
   const sections = buildSections(project);
   const lines: string[] = [`# ${title}`, ""];
   for (const sec of sections) {
-    if (sec.heading) lines.push(`## ${sec.heading}`);
+    if (sec.heading) lines.push(`## ${sec.heading}`, "");
     if (sec.rows) {
-      for (const [k, v] of sec.rows) lines.push(`- **${k}:** ${v}`);
+      const isParticipants = sec.heading === "Participants";
+      lines.push(`| ${isParticipants ? "Participant" : "Field"} | ${isParticipants ? "Status" : "Value"} |`);
+      lines.push("| --- | --- |");
+      for (const [k, v] of sec.rows) {
+        lines.push(`| ${k.replace(/\|/g, "\\|")} | ${v.replace(/\|/g, "\\|")} |`);
+      }
+      lines.push("");
     }
     if (sec.paragraphs) {
-      for (const p of sec.paragraphs) lines.push(p);
+      for (const p of sec.paragraphs) lines.push(p, "");
     }
     if (sec.list) {
       for (const item of sec.list) {
         lines.push(`### ${item.heading}`);
         for (const l of item.lines) lines.push(`- ${l}`);
+        lines.push("");
       }
     }
-    lines.push("");
   }
   return lines.join("\n").trimEnd() + "\n";
 }
 
-function buildDocsHTML(project: Project, { standalone }: { standalone: boolean }): string {
-  const s = project.S ?? ({} as ProjectState);
-  const title = val(s.projectName) || "Untitled research";
-  const sections = buildSections(project);
-  const body: string[] = [`<h1>${escapeHtml(title)}</h1>`];
-  for (const sec of sections) {
-    if (sec.heading) body.push(`<h2>${escapeHtml(sec.heading)}</h2>`);
-    if (sec.rows) {
-      body.push("<ul>");
-      for (const [k, v] of sec.rows) {
-        body.push(`<li><strong>${escapeHtml(k)}:</strong> ${escapeHtml(v)}</li>`);
-      }
-      body.push("</ul>");
-    }
-    if (sec.paragraphs) {
-      for (const p of sec.paragraphs) body.push(`<p>${escapeHtml(p)}</p>`);
-    }
-    if (sec.list) {
-      for (const item of sec.list) {
-        body.push(`<h3>${escapeHtml(item.heading)}</h3>`);
-        if (item.lines.length > 0) {
-          body.push("<ul>");
-          for (const l of item.lines) body.push(`<li>${escapeHtml(l)}</li>`);
-          body.push("</ul>");
-        }
-      }
-    }
-  }
-  const inner = body.join("\n");
-  if (!standalone) return inner;
+// A neutral print stylesheet that mirrors the in-app rich editor — not a
+// Google Doc — so the PDF matches what the user sees.
+function printDoc(title: string, bodyHtml: string): string {
   return `<!doctype html>
 <html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>
 <style>
-  body { font: 11pt/1.5 "Google Sans","Helvetica Neue",Arial,sans-serif; color: #202124; max-width: 8.5in; margin: 1in auto; padding: 0 0.5in; }
-  h1 { font-size: 26pt; font-weight: 400; margin: 0 0 0.6em; }
-  h2 { font-size: 16pt; font-weight: 400; margin: 1.4em 0 0.4em; color: #1a73e8; }
-  h3 { font-size: 12pt; font-weight: 600; margin: 1em 0 0.3em; }
-  p, li { font-size: 11pt; line-height: 1.55; }
-  ul { padding-left: 1.4em; }
-  li { margin: 0.15em 0; }
-</style>
-</head><body>${inner}</body></html>`;
+  body { font: 14px/1.6 -apple-system, "Helvetica Neue", Arial, sans-serif; color: #18181b; max-width: 760px; margin: 48px auto; padding: 0 24px; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 12px; }
+  h2 { font-size: 18px; font-weight: 600; margin: 24px 0 8px; }
+  h3 { font-size: 15px; font-weight: 600; margin: 18px 0 6px; }
+  p, li { font-size: 14px; line-height: 1.6; }
+  ul, ol { padding-left: 22px; }
+  li { margin: 3px 0; }
+  strong { font-weight: 600; }
+  blockquote { margin: 8px 0; border-left: 3px solid #e4e4e7; padding: 4px 12px; color: #52525b; font-style: italic; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  th, td { border: 1px solid #e4e4e7; padding: 6px 10px; text-align: left; font-size: 13px; }
+  th { background: #f4f4f5; font-weight: 600; }
+</style></head><body>${bodyHtml}</body></html>`;
 }
 
 export function PreviewSheet({ project }: { project: Project }) {
   const [open, setOpen] = useState(false);
-  const markdown = useMemo(() => buildMarkdown(project), [project]);
-  const docsHtml = useMemo(
-    () => buildDocsHTML(project, { standalone: false }),
+  const initialHtml = useMemo(
+    () => marked.parse(buildMarkdown(project), { async: false }) as string,
     [project],
   );
+  const [content, setContent] = useState(initialHtml);
 
-  // Copy the plan in its rendered format: rich HTML (so pasting keeps the
-  // formatting) with a plain-text fallback.
+  // Resync when the underlying plan changes (e.g. project edited elsewhere).
+  useEffect(() => setContent(initialHtml), [initialHtml]);
+
+  const title = project.S?.projectName || "Untitled research";
+
   async function writeRich() {
+    const plain = content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
     const clip = (
       window as unknown as { ClipboardItem?: typeof ClipboardItem }
     ).ClipboardItem;
     if (clip && navigator.clipboard && "write" in navigator.clipboard) {
       await navigator.clipboard.write([
         new clip({
-          "text/html": new Blob([docsHtml], { type: "text/html" }),
-          "text/plain": new Blob([markdown], { type: "text/plain" }),
+          "text/html": new Blob([content], { type: "text/html" }),
+          "text/plain": new Blob([plain], { type: "text/plain" }),
         }),
       ]);
     } else {
-      await navigator.clipboard.writeText(markdown);
+      await navigator.clipboard.writeText(plain);
     }
   }
 
@@ -234,14 +222,13 @@ export function PreviewSheet({ project }: { project: Project }) {
   }
 
   function downloadPdf() {
-    const html = buildDocsHTML(project, { standalone: true });
     const win = window.open("", "_blank");
     if (!win) {
       toast.error("Popup blocked. Allow popups to download the PDF.");
       return;
     }
     win.document.open();
-    win.document.write(html);
+    win.document.write(printDoc(title, content));
     win.document.close();
     win.focus();
     setTimeout(() => win.print(), 250);
@@ -251,27 +238,33 @@ export function PreviewSheet({ project }: { project: Project }) {
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger
         render={
-          <Button variant="outline" size="sm" className="h-[30px] gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            aria-label="Preview"
+            title="Preview"
+            className="size-[30px] p-0"
+          >
             <Eye className="size-3.5" />
-            Preview
           </Button>
         }
       />
       <SheetContent className="flex w-full flex-col gap-3 sm:max-w-[960px] lg:max-w-[1100px]">
         <SheetHeader>
-          <SheetTitle>{project.S?.projectName || "Untitled research"}</SheetTitle>
+          <SheetTitle>{title}</SheetTitle>
           <SheetDescription>
-            Formatted research plan — styled like a Google Doc.
+            Formatted research plan — edit with the same tools as reports, then
+            copy or export.
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex flex-1 flex-col overflow-hidden px-4">
-          <div className="h-full overflow-y-auto rounded-md border border-border bg-card">
-            <div
-              className="px-10 py-8 text-[#202124] [font-family:'Google_Sans','Helvetica_Neue',Arial,sans-serif] [&_h1]:mb-3 [&_h1]:text-[26pt] [&_h1]:font-normal [&_h2]:mt-6 [&_h2]:mb-2 [&_h2]:text-[16pt] [&_h2]:font-normal [&_h2]:text-[#1a73e8] [&_h3]:mt-4 [&_h3]:mb-1 [&_h3]:text-[12pt] [&_h3]:font-semibold [&_li]:my-1 [&_li]:text-[11pt] [&_li]:leading-[1.55] [&_p]:text-[11pt] [&_p]:leading-[1.55] [&_ul]:list-disc [&_ul]:pl-6"
-              dangerouslySetInnerHTML={{ __html: docsHtml }}
-            />
-          </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4">
+          <RichEditor
+            value={content}
+            onChange={setContent}
+            minHeight="50vh"
+            maxHeight="68vh"
+          />
         </div>
 
         <SheetFooter className="flex-row flex-wrap justify-between gap-2">

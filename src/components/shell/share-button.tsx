@@ -44,9 +44,14 @@ export function ShareButton({ projectHandle, projectName }: Props) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <Button variant="outline" size="sm" className="h-[30px] gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            aria-label="Share"
+            title="Share"
+            className="size-[30px] p-0"
+          >
             <Share2 className="size-3.5" />
-            Share
           </Button>
         }
       />

@@ -127,7 +127,9 @@ export function DirectoryShell({ projects, archivedCustomers = [], user }: Props
             </div>
             <Select value={status} onValueChange={(v) => v && setStatus(v)}>
               <SelectTrigger className="sm:w-[180px]">
-                <SelectValue />
+                <SelectValue>
+                  {STATUS_OPTIONS.find((o) => o.value === status)?.label}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {STATUS_OPTIONS.map((o) => (
@@ -139,7 +141,9 @@ export function DirectoryShell({ projects, archivedCustomers = [], user }: Props
             </Select>
             <Select value={method} onValueChange={(v) => v && setMethod(v)}>
               <SelectTrigger className="sm:w-[200px]">
-                <SelectValue />
+                <SelectValue>
+                  {METHOD_OPTIONS.find((o) => o.value === method)?.label}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {METHOD_OPTIONS.map((o) => (

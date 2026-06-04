@@ -36,7 +36,7 @@ export function CompleteToggle({
 
   return (
     <Button
-      variant={completed ? "outline" : "default"}
+      variant={completed ? "outline" : "secondary"}
       size="sm"
       onClick={toggle}
       disabled={saving}

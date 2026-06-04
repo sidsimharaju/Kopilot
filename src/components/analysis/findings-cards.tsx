@@ -14,9 +14,9 @@ import type {
 } from "@/lib/types";
 
 const CONFIDENCE_TONE: Record<FindingConfidence, string> = {
-  high: "bg-foreground text-background",
-  medium: "bg-muted text-foreground",
-  low: "bg-muted text-muted-foreground",
+  high: "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-400",
+  medium: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400",
+  low: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-400",
 };
 
 function mergeFindingText(f: ObjectiveFinding): string {
@@ -87,43 +87,49 @@ export function FindingsCards({ analysis, update }: Props) {
               </CardTitle>
             </CardHeader>
             {!isCollapsed ? (
-              <CardContent className="max-h-[520px] overflow-y-auto">
-                <table className="w-full border-collapse text-[13px]">
-                  <thead>
-                    <tr className="text-left text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-                      <th className="w-[34%] p-2">Objective</th>
-                      <th className="p-2">Learning</th>
+              <CardContent className="max-h-[560px] overflow-y-auto p-0">
+                <table className="w-full border-collapse">
+                  <thead className="sticky top-0 z-10 bg-card">
+                    <tr className="border-y border-border text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                      <th className="w-[38%] px-4 py-2.5">Objective</th>
+                      <th className="px-4 py-2.5">Learning</th>
                     </tr>
                   </thead>
                   <tbody>
                     {(p.byObjective ?? []).map((f, i) => (
-                      <tr key={i} className="border-t border-border align-top">
-                        <td className="p-2">
-                          <div className="flex flex-col gap-1.5">
-                            <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-                              Objective {i + 1}
-                            </span>
-                            <span className="text-[12.5px] font-medium">
+                      <tr
+                        key={i}
+                        className="border-b border-border align-top last:border-0"
+                      >
+                        <td className="border-r border-border bg-muted/30 px-4 py-3.5">
+                          <div className="flex flex-col gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex size-5 flex-shrink-0 items-center justify-center rounded-full bg-background text-[10px] font-semibold text-muted-foreground ring-1 ring-border">
+                                {i + 1}
+                              </span>
+                              {f.confidence ? (
+                                <span
+                                  className={cn(
+                                    "rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize",
+                                    CONFIDENCE_TONE[f.confidence],
+                                  )}
+                                >
+                                  {f.confidence}
+                                </span>
+                              ) : null}
+                            </div>
+                            <span className="text-[13px] font-medium leading-snug text-foreground">
                               {f.objective}
                             </span>
-                            {f.confidence ? (
-                              <span
-                                className={cn(
-                                  "w-fit rounded-full px-1.5 py-0.5 text-[10px] font-medium",
-                                  CONFIDENCE_TONE[f.confidence],
-                                )}
-                              >
-                                {f.confidence}
-                              </span>
-                            ) : null}
                           </div>
                         </td>
-                        <td className="p-2">
+                        <td className="px-4 py-3.5">
                           <Textarea
-                            rows={5}
+                            rows={4}
                             defaultValue={mergeFindingText(f)}
                             placeholder="No finding yet."
                             onBlur={(e) => setFinding(idx, i, e.target.value)}
+                            className="min-h-[96px] resize-y text-[13px] leading-relaxed"
                           />
                         </td>
                       </tr>

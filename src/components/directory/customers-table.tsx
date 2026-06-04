@@ -272,7 +272,9 @@ export function CustomersTable({
         </div>
         <Select value={cohort} onValueChange={(v) => v && setCohort(v)}>
           <SelectTrigger className="sm:w-[200px]">
-            <SelectValue />
+            <SelectValue>
+              {COHORT_FILTERS.find((o) => o.value === cohort)?.label}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {COHORT_FILTERS.map((o) => (
