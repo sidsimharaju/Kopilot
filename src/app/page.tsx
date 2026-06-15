@@ -1,20 +1,10 @@
 import { requireUser } from "@/lib/auth";
 import { listProjects } from "@/lib/projects";
-import { listArchivedCustomers } from "@/lib/customers";
 import { DirectoryShell } from "@/components/directory/directory-shell";
 
 export default async function HomePage() {
   const user = await requireUser();
-  const [projects, archivedCustomers] = await Promise.all([
-    listProjects(),
-    listArchivedCustomers(),
-  ]);
+  const projects = await listProjects();
 
-  return (
-    <DirectoryShell
-      projects={projects}
-      archivedCustomers={archivedCustomers}
-      user={user}
-    />
-  );
+  return <DirectoryShell projects={projects} user={user} />;
 }

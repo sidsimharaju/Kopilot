@@ -7,7 +7,6 @@ import {
   saveProject,
   setProjectCompleted,
 } from "@/lib/projects";
-import { archiveProjectCustomers } from "@/lib/customers";
 import type { Project } from "@/lib/types";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -59,10 +58,9 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 export async function DELETE(_req: NextRequest, { params }: Ctx) {
   const { id } = await params;
   try {
-    // Hard delete, but first preserve the project's participants as standalone
-    // customers so they remain on the Customers tab.
-    const project = await getProject(id);
-    if (project) await archiveProjectCustomers(project);
+    // Hard delete the project. Its participants are derived from the project
+    // itself, so removing the project also removes them from the Customers tab
+    // (unless they also appear in another live project).
     await deleteProject(id);
     revalidatePath("/");
     return NextResponse.json({ ok: true });

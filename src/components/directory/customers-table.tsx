@@ -39,7 +39,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import type { ArchivedCustomer, ParticipantCohort, Project } from "@/lib/types";
+import type { ParticipantCohort, Project } from "@/lib/types";
 
 type CustomerRow = {
   name: string;
@@ -98,13 +98,7 @@ function dedupeKey(name: string, email: string): string {
   return `${name.trim().toLowerCase()}|${email.trim().toLowerCase()}`;
 }
 
-export function CustomersTable({
-  projects,
-  archived = [],
-}: {
-  projects: Project[];
-  archived?: ArchivedCustomer[];
-}) {
+export function CustomersTable({ projects }: { projects: Project[] }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [cohort, setCohort] = useState<string>("all");
@@ -146,37 +140,8 @@ export function CustomersTable({
       }
     }
 
-    // Merge in customers preserved from hard-deleted projects. Live project
-    // data wins; archived-only people get added with their origin projects.
-    for (const a of archived) {
-      const name = (a.name ?? "").trim();
-      if (!name) continue;
-      const c = (a.cohort ?? "internal") as ParticipantCohort;
-      const email = a.email ?? "";
-      const key = dedupeKey(name, email);
-      const existing = map.get(key);
-      if (existing) {
-        for (const proj of a.projects ?? []) {
-          if (!existing.projects.includes(proj)) existing.projects.push(proj);
-        }
-      } else {
-        map.set(key, {
-          name,
-          company: a.company || "—",
-          role: a.role || "—",
-          email: email || "—",
-          cohort: c,
-          audience: a.audience || AUDIENCE_OPTIONS[c][0].value,
-          hasCSM: Boolean(a.hasCSM),
-          csmName: a.csmName ?? "",
-          csmContact: a.csmContact ?? "",
-          projects: [...(a.projects ?? [])],
-        });
-      }
-    }
-
     return Array.from(map.values());
-  }, [projects, archived]);
+  }, [projects]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
