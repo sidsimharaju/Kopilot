@@ -3,7 +3,7 @@
 # The deploy step only swaps the image, so existing env vars, secrets,
 # and the service account on the Cloud Run service are preserved.
 substitutions:
-  _SERVICE: research-cockpit
+  _SERVICE: kopilot
   _REGION: us-central1
   _REPO: cloud-run-source-deploy
 
