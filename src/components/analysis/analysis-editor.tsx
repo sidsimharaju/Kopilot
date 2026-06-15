@@ -4,7 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { runAnalysis } from "@/lib/analyze";
 import { useProject } from "@/lib/use-project";
-import type { Project } from "@/lib/types";
+import type { AnalysisResult, Project } from "@/lib/types";
 import { AnalysisSelectionPanel } from "./analysis-selection-panel";
 import { FindingsCards } from "./findings-cards";
 import { ReportsPanel } from "./reports-panel";
@@ -24,6 +24,25 @@ export function AnalysisEditor({ initial }: { initial: Project }) {
   const hasAnalysis =
     (project.S.analysisResult?.participants?.length ?? 0) > 0 ||
     Boolean(project.S.synthesisResult);
+
+  // The findings section shows per participant, one row per learning objective.
+  // Before any transcript analysis runs we render an empty scaffold so the
+  // researcher can type what they learned by hand; the first edit materializes
+  // it into analysisResult (see FindingsCards).
+  const objectives = (project.S.objectives ?? []).filter((o) => o.objective);
+  const displayAnalysis: AnalysisResult = hasAnalysis
+    ? (project.S.analysisResult ?? { participants: [] })
+    : {
+        participants: participants.map((p) => ({
+          name: p.name,
+          role: p.role,
+          byObjective: objectives.map((o) => ({
+            objective: o.objective as string,
+            finding: "",
+            quotes: [],
+          })),
+        })),
+      };
 
   function setSelection(ids: number[]) {
     update((s) => ({ ...s, analysisSelection: ids }));
@@ -75,11 +94,9 @@ export function AnalysisEditor({ initial }: { initial: Project }) {
         onAnalyze={analyze}
       />
 
-      {hasAnalysis ? (
-        <FindingsCards analysis={project.S.analysisResult} update={update} />
-      ) : null}
+      <FindingsCards analysis={displayAnalysis} update={update} />
 
-      {hasAnalysis ? <ReportsPanel project={project} update={update} /> : null}
+      <ReportsPanel project={project} update={update} />
     </div>
   );
 }

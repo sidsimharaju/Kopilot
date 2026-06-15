@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { generateReport } from "@/lib/analyze";
+import { fullTemplate, summaryTemplate } from "@/lib/report-templates";
 import type { Project, ProjectState } from "@/lib/types";
 import { RichEditor } from "./rich-editor";
 
@@ -29,6 +30,11 @@ export function ReportsPanel({ project, update }: Props) {
 
   const content = reports[active] ?? "";
   const hasContent = Boolean(content.trim());
+  // Before a report exists, seed the editor with an empty template that mirrors
+  // the shared report skill, so the researcher can fill it in by hand. The
+  // template isn't persisted until they actually edit it.
+  const template = active === "full" ? fullTemplate(project) : summaryTemplate(project);
+  const editorValue = hasContent ? content : template;
 
   function setReport(kind: Kind, value: string) {
     update((s) => ({
@@ -127,19 +133,19 @@ export function ReportsPanel({ project, update }: Props) {
           )}
         </div>
 
-        {hasContent ? (
-          <RichEditor
-            value={content}
-            onChange={(v) => setReport(active, v)}
-            placeholder={`Write the ${TITLE[active].toLowerCase()} here.`}
-            minHeight="420px"
-            maxHeight="720px"
-          />
-        ) : (
-          <div className="rounded border border-dashed border-border bg-background px-4 py-8 text-center text-[12.5px] text-muted-foreground">
-            No {TITLE[active].toLowerCase()} yet. Generate one to see it here.
-          </div>
-        )}
+        {!hasContent ? (
+          <p className="text-[12px] text-muted-foreground">
+            Starter template — fill it in directly, or generate it from your
+            transcripts.
+          </p>
+        ) : null}
+        <RichEditor
+          value={editorValue}
+          onChange={(v) => setReport(active, v)}
+          placeholder={`Write the ${TITLE[active].toLowerCase()} here.`}
+          minHeight="420px"
+          maxHeight="720px"
+        />
       </CardContent>
     </Card>
   );

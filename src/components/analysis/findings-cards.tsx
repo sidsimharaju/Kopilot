@@ -38,7 +38,10 @@ export function FindingsCards({ analysis, update }: Props) {
 
   function setFinding(pIdx: number, oIdx: number, text: string) {
     update((s) => {
-      const next = structuredClone(s.analysisResult) ?? { participants: [] };
+      // Clone the rows currently on screen, not s.analysisResult — before any
+      // analysis has run those rows are an empty scaffold that lives only in
+      // props. Persisting from the scaffold materializes it into analysisResult.
+      const next: AnalysisResult = structuredClone(analysis) ?? { participants: [] };
       const obj = next.participants?.[pIdx]?.byObjective?.[oIdx];
       if (obj) {
         obj.finding = text;
@@ -46,6 +49,15 @@ export function FindingsCards({ analysis, update }: Props) {
       }
       return { ...s, analysisResult: next };
     });
+  }
+
+  if (participants.length === 0) {
+    return (
+      <div className="rounded border border-dashed border-border bg-background px-4 py-8 text-center text-[12.5px] text-muted-foreground">
+        No participants yet. Add people in Conduct to capture findings per
+        participant, or attach transcripts and run analysis.
+      </div>
+    );
   }
 
   return (
@@ -96,6 +108,17 @@ export function FindingsCards({ analysis, update }: Props) {
                     </tr>
                   </thead>
                   <tbody>
+                    {(p.byObjective ?? []).length === 0 ? (
+                      <tr className="border-b border-border last:border-0">
+                        <td
+                          colSpan={2}
+                          className="px-4 py-6 text-center text-[12.5px] text-muted-foreground"
+                        >
+                          No learning objectives yet. Add them in Setup to
+                          capture findings here.
+                        </td>
+                      </tr>
+                    ) : null}
                     {(p.byObjective ?? []).map((f, i) => (
                       <tr
                         key={i}
