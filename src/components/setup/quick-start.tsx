@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { callAgentJSON } from "@/lib/agent";
 import { cn } from "@/lib/utils";
 import type {
+  AnalysisResult,
   Objective,
   ObjectivePriority,
   Participant,
@@ -32,6 +33,12 @@ type FillBriefResult = {
   objectives?: Objective[];
 };
 
+type DocFinding = {
+  name?: string;
+  role?: string;
+  byObjective?: Array<{ objective?: string; finding?: string }>;
+};
+
 type DocImportResult = FillBriefResult & {
   date?: string;
   methodology?: string;
@@ -41,6 +48,9 @@ type DocImportResult = FillBriefResult & {
   sessions?: Record<"internal" | "customers" | "noncustomers", SessionRange>;
   criteria?: { customers?: string; noncustomers?: string };
   participants?: Participant[];
+  findings?: DocFinding[];
+  reportSummary?: string;
+  reportFull?: string;
 };
 
 type Props = {
@@ -170,15 +180,31 @@ Return this exact schema. Use empty string "" or empty array [] for anything not
       "sessionPassword": "session passcode if mentioned",
       "sessionDoc": "doc / guide URL if mentioned"
     }
-  ]
+  ],
+  "findings": [
+    {
+      "name": "participant name this finding belongs to",
+      "role": "their role if given",
+      "byObjective": [
+        {
+          "objective": "the learning objective text this finding addresses (match one of the objectives above)",
+          "finding": "the finding / learning / insight recorded for this participant on this objective"
+        }
+      ]
+    }
+  ],
+  "reportSummary": "if the document already contains a research summary or write-up, reproduce it here as markdown (headings, tables, bullet lists preserved); else empty",
+  "reportFull": "if the document contains a longer / detailed report distinct from the summary, reproduce it here as markdown; else empty"
 }
 
 Rules:
 - Set cohort flags true only if the document explicitly discusses that group of participants.
 - For methodology, "usability" = moderated usability test; "discovery" = discovery interview. Default to "discovery" if unclear.
-- For keyQuestions, format as a list with "- " prefix on each line if multiple.`;
+- For keyQuestions, format as a list with "- " prefix on each line if multiple.
+- For "findings": ONLY include this if the document records actual findings, learnings, insights, or per-participant notes tied to the objectives. If the document is a plan with no findings yet, return [].
+- For "reportSummary" / "reportFull": ONLY fill these if the document genuinely contains written-up report prose. Do NOT fabricate or summarize the plan — leave empty if there is no existing report content.`;
 
-      const data = await callAgentJSON<DocImportResult>(prompt, { max_tokens: 6000 });
+      const data = await callAgentJSON<DocImportResult>(prompt, { max_tokens: 8000 });
       applyDocImport(data, state, update, updateProject);
       toast.success(`Imported ${file.name}`);
     } catch (err) {
@@ -347,8 +373,68 @@ function applyDocImport(
       next.participants = [...existing, ...incoming];
       updateProject((proj) => ({ ...proj, pid: startId + 1 + incoming.length }));
     }
+
+    // If the document already contained findings, pull them straight into the
+    // Analysis tab instead of leaving an empty scaffold.
+    const analysis = buildAnalysisFromDoc(data.findings ?? [], data.objectives ?? []);
+    if (analysis) next.analysisResult = analysis;
+
+    // Same for any written-up report content.
+    const summary = (data.reportSummary ?? "").trim();
+    const full = (data.reportFull ?? "").trim();
+    if (summary || full) {
+      next.reports = {
+        ...(s.reports ?? {}),
+        ...(summary ? { summary } : {}),
+        ...(full ? { full } : {}),
+      };
+    }
     return next;
   });
+}
+
+// Turn findings extracted from an uploaded doc into an AnalysisResult, aligning
+// each participant's findings to the imported objectives (matched by text, then
+// by position). Returns null unless at least one real finding was found.
+function buildAnalysisFromDoc(
+  findings: DocFinding[],
+  objectives: Objective[],
+): AnalysisResult | null {
+  const objTexts = objectives
+    .map((o) => (o.objective ?? "").trim())
+    .filter(Boolean);
+
+  const participants = findings
+    .filter((f) => (f.name ?? "").trim() || (f.byObjective ?? []).length > 0)
+    .map((f) => {
+      const incoming = f.byObjective ?? [];
+      const byObjective =
+        objTexts.length > 0
+          ? objTexts.map((objText, i) => {
+              const match =
+                incoming.find(
+                  (e) =>
+                    (e?.objective ?? "").trim().toLowerCase() ===
+                    objText.toLowerCase(),
+                ) ?? incoming[i];
+              return {
+                objective: objText,
+                finding: (match?.finding ?? "").trim(),
+                quotes: [],
+              };
+            })
+          : incoming.map((e) => ({
+              objective: (e.objective ?? "").trim(),
+              finding: (e.finding ?? "").trim(),
+              quotes: [],
+            }));
+      return { name: f.name, role: f.role, byObjective };
+    });
+
+  const hasReal = participants.some((p) =>
+    p.byObjective.some((o) => o.finding.length > 0),
+  );
+  return hasReal ? { participants } : null;
 }
 
 function validCohort(value: unknown): ParticipantCohort {
