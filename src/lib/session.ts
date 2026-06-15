@@ -34,7 +34,22 @@ export const sessionCookie = {
 };
 
 export const ALLOWED_EMAILS = new Set<string>([
+  "ally.christensen@konghq.com",
+  "andras.hajgato@konghq.com",
+  "erick@konghq.com",
+  "helen.tang@konghq.com",
+  "janmesh.gharat@konghq.com",
+  "jason.walker@konghq.com",
+  "jenya.singh@konghq.com",
+  "jessica.demartini@konghq.com",
+  "julie.zhou@konghq.com",
+  "julieta.curdi@konghq.com",
+  "katrina.lindholm@konghq.com",
+  "missy.turco@konghq.com",
+  "mo.chang@konghq.com",
+  "salomon.onyegbulem@konghq.com",
+  "santhosh.sivan@konghq.com",
   "shikha.sharma@konghq.com",
   "sid.simharaju@konghq.com",
-  "ally.christensen@konghq.com",
+  "travis.terwilligar@konghq.com",
 ]);
