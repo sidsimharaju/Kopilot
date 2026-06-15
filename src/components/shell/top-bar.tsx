@@ -23,12 +23,11 @@ export function TopBar({
     <header className="row-start-1 col-span-2 flex h-[50px] items-center border-b border-border bg-card">
       <Link
         href="/"
-        className="flex h-full w-[200px] flex-shrink-0 items-center gap-2 border-r border-border px-4 text-[13.5px] font-semibold tracking-tight"
+        aria-label="Kopilot home"
+        className="flex h-full w-[200px] flex-shrink-0 items-center border-r border-border px-4"
       >
-        <span className="flex size-6 items-center justify-center rounded-[5px] bg-foreground text-card text-[10px] font-semibold">
-          K
-        </span>
-        Kopilot
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/kopilot-logo.svg" alt="Kopilot" className="h-5 w-auto" />
       </Link>
       <div className="flex min-w-0 flex-1 items-center gap-2.5 pl-[18px]">
         <h1 className="truncate text-sm font-medium tracking-tight">{title}</h1>

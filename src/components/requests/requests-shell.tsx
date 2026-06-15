@@ -63,14 +63,9 @@ export function RequestsShell({ initial, user }: Props) {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="flex h-14 flex-shrink-0 items-center gap-6 border-b border-border bg-card px-6">
-        <Link
-          href="/"
-          className="flex items-center gap-2 text-[14px] font-semibold tracking-tight"
-        >
-          <span className="flex size-7 items-center justify-center rounded-md bg-foreground text-[12px] font-semibold text-background">
-            K
-          </span>
-          Kopilot
+        <Link href="/" className="flex items-center" aria-label="Kopilot home">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/kopilot-logo.svg" alt="Kopilot" className="h-6 w-auto" />
         </Link>
         <nav className="flex items-center gap-4 text-[13px] text-muted-foreground">
           <Link href="/" className="hover:text-foreground">
