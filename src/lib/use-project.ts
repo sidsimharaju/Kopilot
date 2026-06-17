@@ -10,6 +10,10 @@ export type SaveStatus = "idle" | "saving" | "saved" | "error";
 export function useProject(initial: Project) {
   const [project, setProject] = useState<Project>(initial);
   const [status, setStatus] = useState<SaveStatus>("idle");
+  // Tracks whether there are edits not yet persisted. `edits` counts every
+  // change; a save only clears `dirty` if no newer edit landed mid-flight.
+  const [dirty, setDirty] = useState(false);
+  const edits = useRef(0);
   const latest = useRef(initial);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -29,6 +33,7 @@ export function useProject(initial: Project) {
 
   const save = useCallback(async () => {
     const current = latest.current;
+    const startedAt = edits.current;
     setStatus("saving");
     try {
       const res = await fetch(`/api/projects/${current.id}`, {
@@ -54,6 +59,8 @@ export function useProject(initial: Project) {
         return next;
       });
       setStatus("saved");
+      // Only mark clean if no further edits arrived while this save ran.
+      if (edits.current === startedAt) setDirty(false);
       setTimeout(() => setStatus((s) => (s === "saved" ? "idle" : s)), 1500);
     } catch (err) {
       console.error("Save failed", err);
@@ -72,6 +79,8 @@ export function useProject(initial: Project) {
   const update = useCallback(
     (mut: (s: ProjectState) => ProjectState) => {
       setProject((p) => ({ ...p, S: mut(p.S ?? {}) }));
+      edits.current += 1;
+      setDirty(true);
       queueSave();
     },
     [queueSave],
@@ -80,6 +89,8 @@ export function useProject(initial: Project) {
   const updateProject = useCallback(
     (mut: (p: Project) => Project) => {
       setProject(mut);
+      edits.current += 1;
+      setDirty(true);
       queueSave();
     },
     [queueSave],
@@ -91,5 +102,5 @@ export function useProject(initial: Project) {
     };
   }, []);
 
-  return { project, status, update, updateProject, saveNow: save };
+  return { project, status, dirty, update, updateProject, saveNow: save };
 }
