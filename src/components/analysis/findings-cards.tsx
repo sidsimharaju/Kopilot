@@ -148,6 +148,10 @@ export function FindingsCards({ analysis, update }: Props) {
                         </td>
                         <td className="px-4 py-3.5">
                           <Textarea
+                            // Remount when the underlying finding changes (e.g.
+                            // after Re-analyze fills it) so the uncontrolled
+                            // textarea reflects the new value.
+                            key={mergeFindingText(f) || `empty-${i}`}
                             rows={4}
                             defaultValue={mergeFindingText(f)}
                             placeholder="No finding yet."

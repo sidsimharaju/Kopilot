@@ -25,24 +25,46 @@ export function AnalysisEditor({ initial }: { initial: Project }) {
     (project.S.analysisResult?.participants?.length ?? 0) > 0 ||
     Boolean(project.S.synthesisResult);
 
-  // The findings section shows per participant, one row per learning objective.
-  // Before any transcript analysis runs we render an empty scaffold so the
-  // researcher can type what they learned by hand; the first edit materializes
-  // it into analysisResult (see FindingsCards).
-  const objectives = (project.S.objectives ?? []).filter((o) => o.objective);
-  const displayAnalysis: AnalysisResult = hasAnalysis
-    ? (project.S.analysisResult ?? { participants: [] })
-    : {
-        participants: participants.map((p) => ({
-          name: p.name,
-          role: p.role,
-          byObjective: objectives.map((o) => ({
-            objective: o.objective as string,
-            finding: "",
-            quotes: [],
-          })),
-        })),
-      };
+  // The findings section always shows one card per participant with a row per
+  // learning objective — independent of whether analysis has run. Findings from
+  // a prior analysis are merged in by participant name and aligned to the
+  // current objectives; anything not yet analyzed renders empty so people can
+  // type it by hand or run analysis later (which just fills these in).
+  const objTexts = (project.S.objectives ?? [])
+    .filter((o) => o.objective)
+    .map((o) => o.objective as string);
+  const analyzedByName = new Map(
+    (project.S.analysisResult?.participants ?? []).map((ap) => [
+      (ap.name ?? "").trim().toLowerCase(),
+      ap,
+    ]),
+  );
+  const displayAnalysis: AnalysisResult = {
+    participants: participants.map((p) => {
+      const incoming = analyzedByName.get((p.name ?? "").trim().toLowerCase())?.byObjective ?? [];
+      const byObjective =
+        objTexts.length > 0
+          ? objTexts.map((objText, i) => {
+              const match =
+                incoming.find(
+                  (e) => (e.objective ?? "").trim().toLowerCase() === objText.toLowerCase(),
+                ) ?? incoming[i];
+              return {
+                objective: objText,
+                finding: (match?.finding ?? "").trim(),
+                confidence: match?.confidence,
+                quotes: match?.quotes ?? [],
+              };
+            })
+          : incoming.map((e) => ({
+              objective: e.objective ?? "",
+              finding: e.finding ?? "",
+              confidence: e.confidence,
+              quotes: e.quotes ?? [],
+            }));
+      return { name: p.name, role: p.role, byObjective };
+    }),
+  };
 
   function setSelection(ids: number[]) {
     update((s) => ({ ...s, analysisSelection: ids }));
