@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Sparkles } from "lucide-react";
+import { Check, ChevronDown, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,6 +21,8 @@ type Props = {
   onToggle: (id: number, checked: boolean) => void;
   onSelectAll: (checked: boolean) => void;
   analyzing: boolean;
+  analyzingIds?: number[];
+  doneIds?: number[];
   hasAnalysis: boolean;
   onAnalyze: () => void;
 };
@@ -31,11 +33,15 @@ export function AnalysisSelectionPanel({
   onToggle,
   onSelectAll,
   analyzing,
+  analyzingIds = [],
+  doneIds = [],
   hasAnalysis,
   onAnalyze,
 }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const selected = new Set(selectedIds);
+  const analyzingSet = new Set(analyzingIds);
+  const doneSet = new Set(doneIds);
   const allSelected =
     participants.length > 0 && participants.every((p) => selected.has(p.id!));
   const selectedCount = participants.filter((p) => selected.has(p.id!)).length;
@@ -82,43 +88,69 @@ export function AnalysisSelectionPanel({
               <label className="flex items-center gap-2 border-b border-border/60 pb-2 text-[12px] font-medium">
                 <Checkbox
                   checked={allSelected}
+                  disabled={analyzing}
                   onCheckedChange={(checked) => onSelectAll(Boolean(checked))}
                 />
                 Select all ({participants.length})
               </label>
               <div className="flex flex-col gap-1">
-                {participants.map((p) => (
-                  <label
-                    key={p.id}
-                    className="flex items-center gap-2.5 rounded-md px-1.5 py-1.5 transition-colors hover:bg-background"
-                  >
-                    <Checkbox
-                      checked={selected.has(p.id!)}
-                      onCheckedChange={(checked) =>
-                        onToggle(p.id!, Boolean(checked))
-                      }
-                    />
-                    <span className="flex size-7 flex-shrink-0 items-center justify-center rounded-full bg-muted text-[10.5px] font-semibold text-muted-foreground">
-                      {initials(p.name)}
-                    </span>
-                    <div className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate text-[13px] font-medium">
-                        {p.name}
+                {participants.map((p) => {
+                  const inRun = analyzing && analyzingSet.has(p.id!);
+                  const isDone = inRun && doneSet.has(p.id!);
+                  const isPending = inRun && !isDone;
+                  return (
+                    <label
+                      key={p.id}
+                      className="flex items-center gap-2.5 rounded-md px-1.5 py-1.5 transition-colors hover:bg-background"
+                    >
+                      <Checkbox
+                        checked={selected.has(p.id!)}
+                        disabled={analyzing}
+                        onCheckedChange={(checked) =>
+                          onToggle(p.id!, Boolean(checked))
+                        }
+                      />
+                      <span className="flex size-7 flex-shrink-0 items-center justify-center rounded-full bg-muted text-[10.5px] font-semibold text-muted-foreground">
+                        {initials(p.name)}
                       </span>
-                      <span className="truncate text-[11px] text-muted-foreground">
-                        {[p.role, p.company].filter(Boolean).join(" · ")}
-                      </span>
-                    </div>
-                    <span className="text-[10.5px] tabular-nums text-muted-foreground">
-                      {(p.transcript ?? "").length.toLocaleString()} chars
-                    </span>
-                  </label>
-                ))}
+                      <div className="flex min-w-0 flex-1 flex-col">
+                        <span
+                          className={cn(
+                            "truncate text-[13px] font-medium transition-colors",
+                            isDone && "text-muted-foreground line-through",
+                          )}
+                        >
+                          {p.name}
+                        </span>
+                        <span className="truncate text-[11px] text-muted-foreground">
+                          {[p.role, p.company].filter(Boolean).join(" · ")}
+                        </span>
+                      </div>
+                      {isPending ? (
+                        <span className="flex items-center gap-1 text-[11px] text-chart-3">
+                          <Loader2 className="size-3.5 animate-spin" />
+                          Analyzing…
+                        </span>
+                      ) : isDone ? (
+                        <span className="flex items-center gap-1 text-[11px] font-medium text-green-600 dark:text-green-400">
+                          <Check className="size-3.5" />
+                          Done
+                        </span>
+                      ) : (
+                        <span className="text-[10.5px] tabular-nums text-muted-foreground">
+                          {(p.transcript ?? "").length.toLocaleString()} chars
+                        </span>
+                      )}
+                    </label>
+                  );
+                })}
               </div>
 
               <div className="flex items-center justify-between gap-3 pt-1">
                 <span className="text-[11.5px] text-muted-foreground">
-                  {selectedCount} of {participants.length} selected
+                  {analyzing
+                    ? `Analyzed ${doneSet.size} of ${analyzingSet.size}…`
+                    : `${selectedCount} of ${participants.length} selected`}
                 </span>
                 <Button
                   onClick={onAnalyze}

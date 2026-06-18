@@ -160,6 +160,7 @@ async function loadSkill(name: string): Promise<string> {
 
 export async function runAnalysis(
   project: Project,
+  onProgress?: (participantId: number) => void,
 ): Promise<{ analysis: AnalysisResult; synthesis: Synthesis | null }> {
   const skillName =
     project.S.methodology === "discovery"
@@ -192,6 +193,7 @@ export async function runAnalysis(
       } catch (err) {
         console.error(`Analysis failed for ${p.name}`, err);
       }
+      if (typeof p.id === "number") onProgress?.(p.id);
       return {
         name: p.name,
         role: p.role,

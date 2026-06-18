@@ -12,6 +12,8 @@ import { ReportsPanel } from "./reports-panel";
 export function AnalysisEditor({ initial }: { initial: Project }) {
   const { project, update } = useProject(initial);
   const [analyzing, setAnalyzing] = useState(false);
+  const [analyzingIds, setAnalyzingIds] = useState<number[]>([]);
+  const [doneIds, setDoneIds] = useState<number[]>([]);
 
   const participants = project.S.participants ?? [];
   const withTranscripts = participants.filter(
@@ -88,8 +90,12 @@ export function AnalysisEditor({ initial }: { initial: Project }) {
       return;
     }
     setAnalyzing(true);
+    setAnalyzingIds(effectiveSelected);
+    setDoneIds([]);
     try {
-      const { analysis, synthesis } = await runAnalysis(project);
+      const { analysis, synthesis } = await runAnalysis(project, (id) => {
+        setDoneIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+      });
       update((s) => ({
         ...s,
         analysisResult: analysis,
@@ -101,6 +107,8 @@ export function AnalysisEditor({ initial }: { initial: Project }) {
       toast.error(`Analysis failed: ${message}`);
     } finally {
       setAnalyzing(false);
+      setAnalyzingIds([]);
+      setDoneIds([]);
     }
   }
 
@@ -112,6 +120,8 @@ export function AnalysisEditor({ initial }: { initial: Project }) {
         onToggle={toggle}
         onSelectAll={selectAll}
         analyzing={analyzing}
+        analyzingIds={analyzingIds}
+        doneIds={doneIds}
         hasAnalysis={hasAnalysis}
         onAnalyze={analyze}
       />
