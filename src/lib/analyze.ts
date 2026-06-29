@@ -29,6 +29,27 @@ const PARTICIPANT_SCHEMA =
 const SYNTHESIS_SCHEMA =
   'Always respond with valid JSON only — no markdown fences, no preamble. Schema: {"tldr":"","themes":[{"name":"","description":"","participants":""}],"topPainPoints":[""],"recommendations":[""],"openQuestions":[""]}';
 
+// The synthesize-* skills are authored as interactive claude.ai skills: their
+// bodies tell the model to ask for missing context, produce a long markdown
+// report, and deliver to Confluence. In this app the skill body is used as the
+// system prompt for a single-shot JSON call instead, so this directive neutralizes
+// the interactive steps and the "full markdown report" instruction. Prepend the
+// skill body, append the schema after this directive.
+const SKILL_OPERATIONAL_OVERRIDE =
+  "OPERATIONAL CONTEXT (overrides any conflicting instruction in the guidance above): " +
+  "You are running as one automated step inside an app, not an interactive session. " +
+  "All context you need is already in the user message — do NOT ask questions, request " +
+  "missing inputs, or mention delivery/Confluence. Ignore any instruction to produce a " +
+  "markdown report or to avoid truncating sections; instead apply the guidance's analytical " +
+  "judgment (themes, confidence, severity, lens, naming the Kong product) while responding " +
+  "concisely with valid JSON only, matching exactly this schema:";
+
+function withSkill(skillBody: string, schema: string): string {
+  return skillBody
+    ? `${skillBody}\n\n---\n\n${SKILL_OPERATIONAL_OVERRIDE}\n${schema}`
+    : schema;
+}
+
 function objectivesList(project: Project): {
   objList: string;
   objCount: number;
@@ -167,9 +188,13 @@ export async function runAnalysis(
       ? "synthesize-discovery-interview"
       : "synthesize-usability-test";
   const skillBody = await loadSkill(skillName);
-  const participantSystem = skillBody
-    ? `${skillBody}\n\n---\n\nOPERATIONAL FORMAT (overrides any output format described above):\n${PARTICIPANT_SCHEMA}`
-    : PARTICIPANT_SCHEMA;
+  // The skill's per-observation tagging and writing principles apply when
+  // extracting each participant's findings.
+  const participantSystem = withSkill(skillBody, PARTICIPANT_SCHEMA);
+  // The synthesis step is where the skill's cross-participant guidance (themes,
+  // confidence, strategic implications, severity) actually applies, so feed it
+  // the same skill body.
+  const synthesisSystem = withSkill(skillBody, SYNTHESIS_SCHEMA);
 
   const completed = selectedTranscriptParticipants(project);
   const { objList, objCount, canonical } = objectivesList(project);
@@ -206,9 +231,9 @@ export async function runAnalysis(
   if (participants.length > 0) {
     try {
       const parsed = await callAnalysisAgent(
-        SYNTHESIS_SCHEMA,
+        synthesisSystem,
         buildSynthesisPrompt(project, participants, objList),
-        1800,
+        2600,
       );
       synthesis = parsed as Synthesis;
     } catch (err) {
