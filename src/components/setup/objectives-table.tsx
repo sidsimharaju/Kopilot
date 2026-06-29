@@ -13,14 +13,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -39,29 +32,6 @@ type Props = {
   update: (mut: (s: ProjectState) => ProjectState) => void;
   updateProject: (mut: (p: Project) => Project) => void;
 };
-
-const GRID_COLS =
-  "grid grid-cols-[110px_minmax(200px,1fr)_minmax(220px,1.1fr)_minmax(260px,1.2fr)_minmax(200px,1fr)_minmax(200px,1fr)_minmax(200px,1fr)_44px] gap-2";
-
-const HEADER_LABELS = [
-  "Priority",
-  "Objective",
-  "Hypothesis",
-  "Key questions",
-  "Target participants",
-  "Methodology",
-  "Goal targets",
-  "",
-];
-
-function nextNumberedLine(value: string): { insert: string; nextStart: number } {
-  const trimmed = value.trimEnd();
-  const lastLine = trimmed.split("\n").pop() ?? "";
-  const match = lastLine.match(/^(\d+)\.\s/);
-  const next = match ? parseInt(match[1], 10) + 1 : 1;
-  const insert = `\n${next}. `;
-  return { insert, nextStart: insert.length };
-}
 
 export function ObjectivesTable({ state, oid, update, updateProject }: Props) {
   const [pendingDelete, setPendingDelete] = useState<number | null>(null);
@@ -98,137 +68,124 @@ export function ObjectivesTable({ state, oid, update, updateProject }: Props) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Learning objectives</CardTitle>
-        <CardDescription>
-          Fill each column to match the research plan template.
-        </CardDescription>
-        <CardAction>
-          <Button size="sm" variant="outline" onClick={addObjective} className="gap-1.5">
-            <Plus className="size-3.5" /> Add objective
-          </Button>
-        </CardAction>
+      <CardHeader className="flex-row items-center justify-between">
+        <div>
+          <CardTitle>Learning objectives</CardTitle>
+          <p className="mt-1 text-[12px] text-text-3">
+            Fill each column to match the research plan template.
+          </p>
+        </div>
+        <Button size="sm" variant="outline" onClick={addObjective} className="gap-1.5">
+          <Plus className="size-3.5" /> Add objective
+        </Button>
       </CardHeader>
       <CardContent>
         {objectives.length === 0 ? (
-          <div className="rounded border border-dashed border-border bg-background px-4 py-8 text-center text-[13px] text-muted-foreground">
+          <div className="rounded border border-dashed border-border bg-background px-4 py-8 text-center text-[13px] text-text-3">
             No objectives yet. Click <span className="font-medium">Add objective</span>.
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <div className="min-w-[1280px]">
-              <div
-                className={`${GRID_COLS} border-b border-border px-1 pb-2 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted-foreground`}
-              >
-                {HEADER_LABELS.map((label, i) => (
-                  <div key={i}>{label}</div>
+            <table className="w-full min-w-[940px] border-collapse text-[12.5px]">
+              <thead>
+                <tr className="text-left text-[10.5px] font-semibold uppercase tracking-[0.08em] text-text-3">
+                  <th className="w-[100px] p-2">Priority</th>
+                  <th className="p-2">Objective</th>
+                  <th className="p-2">Hypothesis</th>
+                  <th className="p-2">Key questions</th>
+                  <th className="p-2">Target participants</th>
+                  <th className="p-2">Goal targets</th>
+                  <th className="w-[40px] p-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {objectives.map((o) => (
+                  <tr key={o.id} className="align-top">
+                    <td className="p-1">
+                      <Select
+                        value={o.priority ?? "Must"}
+                        onValueChange={(v) => {
+                          if (v) setField(o.id!, "priority", v);
+                        }}
+                      >
+                        <SelectTrigger size="sm" className="w-full text-[12px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PRIORITIES.map((p) => (
+                            <SelectItem key={p} value={p}>
+                              {p}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="p-1">
+                      <Textarea
+                        rows={2}
+                        placeholder="What do you want to learn?"
+                        value={o.objective ?? ""}
+                        onChange={(e) =>
+                          setField(o.id!, "objective", e.target.value)
+                        }
+                      />
+                    </td>
+                    <td className="p-1">
+                      <Textarea
+                        rows={2}
+                        placeholder="Your best assumption"
+                        value={o.hypothesis ?? ""}
+                        onChange={(e) =>
+                          setField(o.id!, "hypothesis", e.target.value)
+                        }
+                      />
+                    </td>
+                    <td className="p-1">
+                      <Textarea
+                        rows={2}
+                        placeholder="One per line"
+                        value={o.keyQuestions ?? ""}
+                        onChange={(e) =>
+                          setField(o.id!, "keyQuestions", e.target.value)
+                        }
+                      />
+                    </td>
+                    <td className="p-1">
+                      <Textarea
+                        rows={2}
+                        placeholder="Who would be ideal?"
+                        value={o.participants ?? ""}
+                        onChange={(e) =>
+                          setField(o.id!, "participants", e.target.value)
+                        }
+                      />
+                    </td>
+                    <td className="p-1">
+                      <Textarea
+                        rows={2}
+                        placeholder="e.g. 3 of 5 rate 4+"
+                        value={o.goalTargets ?? ""}
+                        onChange={(e) =>
+                          setField(o.id!, "goalTargets", e.target.value)
+                        }
+                      />
+                    </td>
+                    <td className="p-1 text-center">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => setPendingDelete(o.id!)}
+                        aria-label="Delete objective"
+                        className="text-text-3 hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </td>
+                  </tr>
                 ))}
-              </div>
-
-              {objectives.map((o) => (
-                <div
-                  key={o.id}
-                  className={`${GRID_COLS} items-stretch border-b border-border px-1 py-3`}
-                >
-                  <div className="flex">
-                    <Select
-                      value={o.priority ?? "Must"}
-                      onValueChange={(v) => {
-                        if (v) setField(o.id!, "priority", v);
-                      }}
-                    >
-                      <SelectTrigger size="sm" className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PRIORITIES.map((p) => (
-                          <SelectItem key={p} value={p}>
-                            {p}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <Textarea
-                    rows={4}
-                    placeholder="What do you want to learn?"
-                    value={o.objective ?? ""}
-                    onChange={(e) => setField(o.id!, "objective", e.target.value)}
-                    className="h-full min-h-24 resize-none [field-sizing:content]"
-                  />
-
-                  <Textarea
-                    rows={4}
-                    placeholder="Your best assumption"
-                    value={o.hypothesis ?? ""}
-                    onChange={(e) => setField(o.id!, "hypothesis", e.target.value)}
-                    className="h-full min-h-24 resize-none [field-sizing:content]"
-                  />
-
-                  <Textarea
-                    rows={4}
-                    placeholder="1. one per line&#10;2. press Enter for the next"
-                    value={o.keyQuestions ?? ""}
-                    onChange={(e) => setField(o.id!, "keyQuestions", e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        const ta = e.currentTarget;
-                        const start = ta.selectionStart ?? 0;
-                        const before = ta.value.slice(0, start);
-                        const after = ta.value.slice(ta.selectionEnd ?? start);
-                        if (!before.trim()) return;
-                        e.preventDefault();
-                        const { insert } = nextNumberedLine(before);
-                        const next = before + insert + after;
-                        setField(o.id!, "keyQuestions", next);
-                        requestAnimationFrame(() => {
-                          ta.selectionStart = ta.selectionEnd = start + insert.length;
-                        });
-                      }
-                    }}
-                    className="h-full min-h-24 resize-none [field-sizing:content]"
-                  />
-
-                  <Textarea
-                    rows={4}
-                    placeholder="Who would be ideal?"
-                    value={o.participants ?? ""}
-                    onChange={(e) => setField(o.id!, "participants", e.target.value)}
-                    className="h-full min-h-24 resize-none [field-sizing:content]"
-                  />
-
-                  <Textarea
-                    rows={4}
-                    placeholder="Method + format"
-                    value={o.methodology ?? ""}
-                    onChange={(e) => setField(o.id!, "methodology", e.target.value)}
-                    className="h-full min-h-24 resize-none [field-sizing:content]"
-                  />
-
-                  <Textarea
-                    rows={4}
-                    placeholder="e.g. 3 of 5 rate 4+"
-                    value={o.goalTargets ?? ""}
-                    onChange={(e) => setField(o.id!, "goalTargets", e.target.value)}
-                    className="h-full min-h-24 resize-none [field-sizing:content]"
-                  />
-
-                  <div className="flex items-start justify-center">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => setPendingDelete(o.id!)}
-                      aria-label="Delete objective"
-                      className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+              </tbody>
+            </table>
           </div>
         )}
       </CardContent>
