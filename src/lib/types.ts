@@ -54,6 +54,7 @@ export type Objective = {
   hypothesis?: string;
   keyQuestions?: string;
   participants?: string;
+  methodology?: string;
   goalTargets?: string;
   [k: string]: unknown;
 };
