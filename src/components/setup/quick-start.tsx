@@ -91,7 +91,6 @@ Return this schema (use empty string "" for anything not determinable):
       "hypothesis": "best assumption",
       "keyQuestions": "questions to answer",
       "participants": "who would be ideal",
-      "methodology": "method + format",
       "goalTargets": "measurable target if applicable"
     }
   ]
@@ -150,7 +149,6 @@ Return this exact schema. Use empty string "" or empty array [] for anything not
       "hypothesis": "",
       "keyQuestions": "questions, one per line, prefix each with - to render as bullets",
       "participants": "ideal participant description",
-      "methodology": "method + format for this objective",
       "goalTargets": "measurable target if applicable"
     }
   ],

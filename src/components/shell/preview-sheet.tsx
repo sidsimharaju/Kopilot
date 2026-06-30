@@ -65,7 +65,6 @@ function buildSections(project: Project): Section[] {
         if (o.hypothesis) lines.push(`Hypothesis: ${o.hypothesis}`);
         if (o.keyQuestions) lines.push(`Key questions: ${o.keyQuestions}`);
         if (o.participants) lines.push(`Target participants: ${o.participants}`);
-        if (o.methodology) lines.push(`Methodology: ${o.methodology}`);
         if (o.goalTargets) lines.push(`Goal targets: ${o.goalTargets}`);
         return {
           heading: `${i + 1}. [${o.priority || "Must"}] ${val(o.objective) || "—"}`,
