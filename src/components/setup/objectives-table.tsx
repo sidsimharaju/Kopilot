@@ -41,7 +41,7 @@ type Props = {
 };
 
 const GRID_COLS =
-  "grid grid-cols-[110px_minmax(200px,1fr)_minmax(220px,1.1fr)_minmax(260px,1.2fr)_minmax(200px,1fr)_minmax(200px,1fr)_minmax(200px,1fr)_44px] gap-2";
+  "grid grid-cols-[110px_minmax(200px,1fr)_minmax(220px,1.1fr)_minmax(260px,1.2fr)_minmax(200px,1fr)_minmax(200px,1fr)_44px] gap-2";
 
 const HEADER_LABELS = [
   "Priority",
@@ -49,7 +49,6 @@ const HEADER_LABELS = [
   "Hypothesis",
   "Key questions",
   "Target participants",
-  "Methodology",
   "Goal targets",
   "",
 ];
@@ -195,14 +194,6 @@ export function ObjectivesTable({ state, oid, update, updateProject }: Props) {
                     placeholder="Who would be ideal?"
                     value={o.participants ?? ""}
                     onChange={(e) => setField(o.id!, "participants", e.target.value)}
-                    className="h-full min-h-24 resize-none [field-sizing:content]"
-                  />
-
-                  <Textarea
-                    rows={4}
-                    placeholder="Method + format"
-                    value={o.methodology ?? ""}
-                    onChange={(e) => setField(o.id!, "methodology", e.target.value)}
                     className="h-full min-h-24 resize-none [field-sizing:content]"
                   />
 
